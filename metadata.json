@@ -1,0 +1,6 @@
+{
+  "name": "Mandala Copilot AI",
+  "description": "Motor de productividad 9x9 asistido por IA para transformar tu gran meta en 8 pilares estratégicos y 64 acciones concretas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
