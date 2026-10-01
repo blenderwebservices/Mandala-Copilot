@@ -32,6 +32,14 @@ export interface Goal {
 }
 
 export type SaasTier = 'free' | 'pro';
+export interface MandalaDocument {
+  version: "1.0";
+  format: "mandala-document";
+  exportedAt: string;
+  source: "Mandala Copilot 9x9";
+  goal: Goal;
+}
+
 
 export const PILLAR_COLORS = [
   { name: 'Sky', bg: 'bg-sky-500/10', border: 'border-sky-500/30', text: 'text-sky-400', badge: 'bg-sky-500/20 text-sky-300' },

@@ -14,7 +14,16 @@ import { WeeklyCheckinModal } from './components/WeeklyCheckinModal';
 import { SaaSTierModal } from './components/SaaSTierModal';
 import { ExportPrintModal } from './components/ExportPrintModal';
 import { GoalsLibraryView } from './components/GoalsLibraryView';
-import { fetchGeneratedActions, GeneratedAction } from './services/api';
+import { 
+  fetchGeneratedActions, 
+  GeneratedAction, 
+  GeminiStatusResult, 
+  fetchGeminiStatus 
+} from './services/api';
+import { AiStatusModal } from './components/AiStatusModal';
+import { DocumentManagerModal, DocumentModalTab } from './components/DocumentManagerModal';
+import { downloadDocumentFile, duplicateGoal } from './services/documentService';
+import { AlertCircle, Key, X } from 'lucide-react';
 
 const STORAGE_KEY = 'mandala_copilot_goals_v1';
 const TIER_STORAGE_KEY = 'mandala_copilot_tier_v1';
@@ -57,6 +66,101 @@ export default function App() {
   const [isCheckinOpen, setIsCheckinOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isTierModalOpen, setIsTierModalOpen] = useState(false);
+
+  // Gemini AI Status & Diagnostics
+  const [aiStatus, setAiStatus] = useState<GeminiStatusResult | null>(null);
+  const [isLoadingAiStatus, setIsLoadingAiStatus] = useState(true);
+  const [isAiStatusModalOpen, setIsAiStatusModalOpen] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+
+  // Document Manager Modal State & Toast
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+  const [documentModalTab, setDocumentModalTab] = useState<DocumentModalTab>('open');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+  };
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  // Global keyboard shortcuts (Cmd+S / Ctrl+S to save, Cmd+O / Ctrl+O to open)
+  useEffect(() => {
+    const handleKeyboardShortcuts = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        setDocumentModalTab('save');
+        setIsDocumentModalOpen(true);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        setDocumentModalTab('open');
+        setIsDocumentModalOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyboardShortcuts);
+    return () => window.removeEventListener('keydown', handleKeyboardShortcuts);
+  }, []);
+
+  const handleOpenDocumentModal = (tab: DocumentModalTab = 'open') => {
+    setDocumentModalTab(tab);
+    setIsDocumentModalOpen(true);
+  };
+
+  const handleImportGoal = (importedGoal: Goal) => {
+    setGoals((prev) => {
+      const existsIndex = prev.findIndex((g) => g.id === importedGoal.id);
+      if (existsIndex >= 0) {
+        const updated = [...prev];
+        updated[existsIndex] = importedGoal;
+        return updated;
+      }
+      return [importedGoal, ...prev];
+    });
+    setCurrentGoalId(importedGoal.id);
+    setActiveView('grid');
+    showToast(`Documento "${importedGoal.title}" abierto en la matriz.`);
+  };
+
+  const handleDuplicateGoal = (goalToDup: Goal) => {
+    const cloned = duplicateGoal(goalToDup);
+    setGoals((prev) => [cloned, ...prev]);
+    setCurrentGoalId(cloned.id);
+    setActiveView('grid');
+    showToast(`Copia creada: "${cloned.title}".`);
+  };
+
+  const handleSaveGoalToFile = (goalToSave: Goal) => {
+    downloadDocumentFile(goalToSave);
+    showToast(`Documento "${goalToSave.title}" descargado en archivo .mandala.`);
+  };
+
+  // Check Gemini connection on mount
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingAiStatus(true);
+    fetchGeminiStatus()
+      .then((status) => {
+        if (isMounted) {
+          setAiStatus(status);
+          setIsLoadingAiStatus(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.error("Error al comprobar Gemini:", err);
+          setIsLoadingAiStatus(false);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Recalibrate target
   const [recalibrateTarget, setRecalibrateTarget] = useState<{
@@ -365,10 +469,54 @@ export default function App() {
         tier={tier}
         activeView={activeView}
         setActiveView={setActiveView}
+        aiStatus={aiStatus}
+        isLoadingAiStatus={isLoadingAiStatus}
+        onOpenAiStatus={() => setIsAiStatusModalOpen(true)}
+        onOpenDocumentModal={handleOpenDocumentModal}
       />
 
       {/* Main View Area */}
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
+        {/* Warning notification banner if Gemini is not working */}
+        {aiStatus && !aiStatus.ok && !isBannerDismissed && (
+          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-950/20 p-3 sm:p-4 text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-amber-950/20 backdrop-blur-sm">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <AlertCircle className="h-4 w-4" />
+              </div>
+              <div className="text-xs sm:text-sm">
+                <span className="font-semibold text-amber-100">
+                  {aiStatus.status === 'placeholder_key' 
+                    ? "GEMINI_API_KEY no configurada:" 
+                    : "Google Gemini no conectado:"}
+                </span>{" "}
+                <span className="text-amber-300">{aiStatus.message}</span>{" "}
+                <span className="text-slate-400 block sm:inline">
+                  (El generador usará plantillas estáticas de respaldo)
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAiStatusModalOpen(true)}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-sm cursor-pointer"
+              >
+                <Key className="h-3.5 w-3.5" />
+                <span>Configurar y Probar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsBannerDismissed(true)}
+                className="p-1 rounded-lg text-amber-400/80 hover:text-white hover:bg-amber-900/40 transition-colors cursor-pointer"
+                title="Descartar aviso"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {activeView === 'grid' ? (
           <MandalaGrid9x9
             goal={currentGoal}
@@ -390,6 +538,9 @@ export default function App() {
             onNewGoal={() => setIsOnboardingOpen(true)}
             tier={tier}
             onOpenTierModal={() => setIsTierModalOpen(true)}
+            onOpenDocumentModal={handleOpenDocumentModal}
+            onDuplicateGoal={handleDuplicateGoal}
+            onSaveGoalToFile={handleSaveGoalToFile}
           />
         )}
       </main>
@@ -460,6 +611,43 @@ export default function App() {
         onClose={() => setIsExportOpen(false)}
         goal={currentGoal}
       />
+
+      {/* AI Status & Diagnostics Modal */}
+      <AiStatusModal
+        isOpen={isAiStatusModalOpen}
+        onClose={() => setIsAiStatusModalOpen(false)}
+        currentStatus={aiStatus}
+        onStatusUpdated={(newStatus) => {
+          setAiStatus(newStatus);
+          if (newStatus.ok) setIsBannerDismissed(false);
+        }}
+      />
+
+      {/* Document Manager Modal (Guardar y Abrir) */}
+      <DocumentManagerModal
+        isOpen={isDocumentModalOpen}
+        onClose={() => setIsDocumentModalOpen(false)}
+        initialTab={documentModalTab}
+        currentGoal={currentGoal}
+        allGoals={goals}
+        onSelectGoal={(id) => {
+          setCurrentGoalId(id);
+          setActiveView('grid');
+        }}
+        onSaveGoal={updateCurrentGoal}
+        onImportGoal={handleImportGoal}
+        onDeleteGoal={handleDeleteGoal}
+        onDuplicateGoal={handleDuplicateGoal}
+        onShowToast={showToast}
+      />
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-indigo-500/40 text-white text-xs font-medium shadow-2xl shadow-indigo-950/60 backdrop-blur-md animate-fade-in">
+          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }
