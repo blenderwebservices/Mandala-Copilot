@@ -14,6 +14,7 @@ import { WeeklyCheckinModal } from './components/WeeklyCheckinModal';
 import { SaaSTierModal } from './components/SaaSTierModal';
 import { ExportPrintModal } from './components/ExportPrintModal';
 import { GoalsLibraryView } from './components/GoalsLibraryView';
+import { MainGoalModal } from './components/MainGoalModal';
 import { 
   fetchGeneratedActions, 
   GeneratedAction, 
@@ -22,7 +23,7 @@ import {
 } from './services/api';
 import { AiStatusModal } from './components/AiStatusModal';
 import { DocumentManagerModal, DocumentModalTab } from './components/DocumentManagerModal';
-import { downloadDocumentFile, duplicateGoal, stripPollution } from './services/documentService';
+import { downloadDocumentFile, duplicateGoal, stripPollution, getGoalFingerprint } from './services/documentService';
 import { AlertCircle, Key, X } from 'lucide-react';
 
 const STORAGE_KEY = 'mandala_copilot_goals_v1';
@@ -81,6 +82,7 @@ export default function App() {
   const [isCheckinOpen, setIsCheckinOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isTierModalOpen, setIsTierModalOpen] = useState(false);
+  const [isMainGoalModalOpen, setIsMainGoalModalOpen] = useState(false);
 
   // Gemini AI Status & Diagnostics
   const [aiStatus, setAiStatus] = useState<GeminiStatusResult | null>(null);
@@ -109,7 +111,11 @@ export default function App() {
     const handleKeyboardShortcuts = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        setDocumentModalTab('save');
+        if (e.shiftKey) {
+          setDocumentModalTab('saveAs');
+        } else {
+          setDocumentModalTab('save');
+        }
         setIsDocumentModalOpen(true);
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
@@ -138,16 +144,23 @@ export default function App() {
       return [importedGoal, ...prev];
     });
     setCurrentGoalId(importedGoal.id);
+    setSavedGoalFingerprint(getGoalFingerprint(importedGoal));
+    setSavedGoalTime(importedGoal.updatedAt || importedGoal.createdAt);
     setActiveView('grid');
     showToast(`Documento "${importedGoal.title}" abierto en la matriz.`);
   };
 
   const handleDuplicateGoal = (goalToDup: Goal) => {
-    const cloned = duplicateGoal(goalToDup);
-    setGoals((prev) => [cloned, ...prev]);
+    const alreadyInList = goals.some((g) => g.id === goalToDup.id);
+    const cloned = alreadyInList ? duplicateGoal(goalToDup) : goalToDup;
+    setGoals((prev) => [cloned, ...prev.filter((g) => g.id !== cloned.id)]);
     setCurrentGoalId(cloned.id);
+    setSavedGoalFingerprint(getGoalFingerprint(cloned));
+    setSavedGoalTime(cloned.updatedAt || cloned.createdAt);
     setActiveView('grid');
-    showToast(`Copia creada: "${cloned.title}".`);
+    if (alreadyInList) {
+      showToast(`Copia creada: "${cloned.title}".`);
+    }
   };
 
   const handleSaveGoalToFile = (goalToSave: Goal) => {
@@ -208,9 +221,34 @@ export default function App() {
 
   const currentGoal = goals.find((g) => g.id === currentGoalId) || goals[0] || PRESET_GOALS[0];
 
-  // Helper to update current goal
+  // Baseline fingerprint and timestamp tracking for change detection
+  const [savedGoalFingerprint, setSavedGoalFingerprint] = useState<string>(() =>
+    getGoalFingerprint(currentGoal)
+  );
+  const [savedGoalTime, setSavedGoalTime] = useState<string>(() =>
+    currentGoal.updatedAt || currentGoal.createdAt
+  );
+
+  // Sync baseline when switching goals
+  useEffect(() => {
+    setSavedGoalFingerprint(getGoalFingerprint(currentGoal));
+    setSavedGoalTime(currentGoal.updatedAt || currentGoal.createdAt);
+  }, [currentGoalId]);
+
+  // Current fingerprint and whether there are unsaved changes
+  const currentFingerprint = getGoalFingerprint(currentGoal);
+  const hasUnsavedChanges = currentFingerprint !== savedGoalFingerprint;
+
+  // Helper to update current goal reactively
   const updateCurrentGoal = (updatedGoal: Goal) => {
     setGoals((prev) => prev.map((g) => (g.id === updatedGoal.id ? updatedGoal : g)));
+  };
+
+  // Explicit Save handler for overwriting/confirming current goal
+  const handleSaveGoal = (savedGoal: Goal) => {
+    updateCurrentGoal(savedGoal);
+    setSavedGoalFingerprint(getGoalFingerprint(savedGoal));
+    setSavedGoalTime(savedGoal.updatedAt || new Date().toISOString());
   };
 
   // Toggle Action Complete / Incomplete
@@ -318,6 +356,28 @@ export default function App() {
       pillars: updatedPillars,
       updatedAt: new Date().toISOString(),
     });
+  };
+
+  // Update all actions of a pillar (e.g. from manual editor in PillarFocusModal)
+  const handleUpdateAllPillarActions = (newActions: MandalaAction[]) => {
+    if (selectedPillarIndex === null) return;
+    const updatedPillars = [...currentGoal.pillars];
+    const pillar = { ...updatedPillars[selectedPillarIndex] };
+    pillar.actions = newActions;
+    updatedPillars[selectedPillarIndex] = pillar;
+
+    updateCurrentGoal({
+      ...currentGoal,
+      pillars: updatedPillars,
+      updatedAt: new Date().toISOString(),
+    });
+    showToast(`Acciones del pilar "${pillar.title}" actualizadas.`);
+  };
+
+  // Save goal from MainGoalModal
+  const handleSaveFromMainGoalModal = (updatedGoal: Goal) => {
+    handleSaveGoal(updatedGoal);
+    showToast(`Meta "${updatedGoal.title}" y pilares actualizados.`);
   };
 
   // Generate 8 actions for a pillar on demand
@@ -488,6 +548,7 @@ export default function App() {
         isLoadingAiStatus={isLoadingAiStatus}
         onOpenAiStatus={() => setIsAiStatusModalOpen(true)}
         onOpenDocumentModal={handleOpenDocumentModal}
+        hasUnsavedChanges={hasUnsavedChanges}
       />
 
       {/* Main View Area */}
@@ -540,6 +601,7 @@ export default function App() {
             onGeneratePillarActions={handleGeneratePillarActions}
             isGeneratingPillar={isGeneratingPillar}
             onOpenCheckin={() => setIsCheckinOpen(true)}
+            onOpenMainGoalModal={() => setIsMainGoalModalOpen(true)}
           />
         ) : (
           <GoalsLibraryView
@@ -582,8 +644,19 @@ export default function App() {
           onRegenerateQuadrant={handleRegenerateQuadrant}
           isRegenerating={isRegeneratingQuadrant}
           onRequestRecalibrate={handleRequestRecalibrate}
+          onUpdateAllPillarActions={handleUpdateAllPillarActions}
         />
       )}
+
+      {/* Main Goal Configuration & Regeneration Modal */}
+      <MainGoalModal
+        isOpen={isMainGoalModalOpen}
+        onClose={() => setIsMainGoalModalOpen(false)}
+        goal={currentGoal}
+        onSaveGoal={handleSaveFromMainGoalModal}
+        tier={tier}
+        onOpenTierModal={() => setIsTierModalOpen(true)}
+      />
 
       {/* Onboarding Wizard Modal */}
       <OnboardingModal
@@ -649,11 +722,13 @@ export default function App() {
           setCurrentGoalId(id);
           setActiveView('grid');
         }}
-        onSaveGoal={updateCurrentGoal}
+        onSaveGoal={handleSaveGoal}
         onImportGoal={handleImportGoal}
         onDeleteGoal={handleDeleteGoal}
         onDuplicateGoal={handleDuplicateGoal}
         onShowToast={showToast}
+        baselineFingerprint={savedGoalFingerprint}
+        lastSavedTime={savedGoalTime}
       />
 
       {/* Toast Notification */}

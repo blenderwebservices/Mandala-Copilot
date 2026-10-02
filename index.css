@@ -14,12 +14,14 @@
 }
 
 @media print {
-  header, nav, button, .no-print {
+  header, nav, button, footer, .no-print, [role="dialog"], .fixed {
     display: none !important;
   }
   body {
     background-color: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   .print-clean {
     border-color: #cbd5e1 !important;

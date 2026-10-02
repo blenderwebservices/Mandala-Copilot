@@ -14,6 +14,7 @@ import {
   Clock,
   CheckCircle2
 } from "lucide-react";
+import { DocumentModalTab } from "./DocumentManagerModal";
 
 interface GoalsLibraryViewProps {
   goals: Goal[];
@@ -23,7 +24,7 @@ interface GoalsLibraryViewProps {
   onNewGoal: () => void;
   tier: SaasTier;
   onOpenTierModal: () => void;
-  onOpenDocumentModal: (tab?: "open" | "save") => void;
+  onOpenDocumentModal: (tab?: DocumentModalTab) => void;
   onDuplicateGoal: (goal: Goal) => void;
   onSaveGoalToFile: (goal: Goal) => void;
 }

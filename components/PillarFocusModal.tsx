@@ -12,7 +12,10 @@ import {
   Trash2, 
   Edit3, 
   Wand2, 
-  AlertCircle
+  AlertCircle,
+  ListOrdered,
+  ClipboardPaste,
+  Save
 } from 'lucide-react';
 
 interface PillarFocusModalProps {
@@ -28,6 +31,7 @@ interface PillarFocusModalProps {
   onRegenerateQuadrant: (focusPrompt: string) => Promise<void>;
   isRegenerating: boolean;
   onRequestRecalibrate: (action: MandalaAction, actionIndex: number) => void;
+  onUpdateAllPillarActions: (newActions: MandalaAction[]) => void;
 }
 
 export const PillarFocusModal: React.FC<PillarFocusModalProps> = ({
@@ -43,11 +47,18 @@ export const PillarFocusModal: React.FC<PillarFocusModalProps> = ({
   onRegenerateQuadrant,
   isRegenerating,
   onRequestRecalibrate,
+  onUpdateAllPillarActions,
 }) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
   const [customFocusPrompt, setCustomFocusPrompt] = useState('');
   const [showRegenerateInput, setShowRegenerateInput] = useState(false);
+
+  // Manual actions regeneration modal / drawer state
+  const [showManualEditor, setShowManualEditor] = useState(false);
+  const [manualDrafts, setManualDrafts] = useState<{ title: string; type: ActionType }[]>([]);
+  const [manualPasteText, setManualPasteText] = useState('');
+  const [showManualPaste, setShowManualPaste] = useState(false);
 
   const completedCount = pillar.actions.filter((a) => a.isCompleted).length;
   const progressPercent = Math.round((completedCount / (pillar.actions.length || 1)) * 100);
@@ -73,20 +84,70 @@ export const PillarFocusModal: React.FC<PillarFocusModalProps> = ({
     setEditingIndex(null);
   };
 
-  const handleRunRegenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onRegenerateQuadrant(customFocusPrompt);
+  const handleRunRegenerate = async (e?: React.FormEvent, directPrompt?: string) => {
+    if (e) e.preventDefault();
+    const promptToSend = directPrompt !== undefined ? directPrompt : customFocusPrompt;
+    await onRegenerateQuadrant(promptToSend);
     setShowRegenerateInput(false);
     setCustomFocusPrompt('');
+  };
+
+  // Open Manual Editor
+  const handleOpenManualEditor = () => {
+    const drafts = Array.from({ length: 8 }, (_, i) => ({
+      title: pillar.actions[i]?.title || `Acción clave 0${i + 1}`,
+      type: pillar.actions[i]?.type || (i % 3 === 0 ? 'recurring' : 'one_time'),
+    }));
+    setManualDrafts(drafts);
+    setManualPasteText('');
+    setShowManualPaste(false);
+    setShowManualEditor(true);
+  };
+
+  // Apply Bulk Pasted Text
+  const handleApplyManualPaste = () => {
+    if (!manualPasteText.trim()) return;
+    const lines = manualPasteText
+      .split('\n')
+      .map((l) => l.trim().replace(/^[-*•\d+.\s]+/, ''))
+      .filter(Boolean);
+
+    if (lines.length === 0) return;
+
+    setManualDrafts((prev) =>
+      prev.map((d, idx) => ({
+        ...d,
+        title: lines[idx] !== undefined ? lines[idx] : d.title,
+      }))
+    );
+    setShowManualPaste(false);
+    setManualPasteText('');
+  };
+
+  // Save Manual Actions
+  const handleSaveManualEditor = () => {
+    const newActions: MandalaAction[] = manualDrafts.map((d, idx) => ({
+      id: pillar.actions[idx]?.id || `action-${Date.now()}-${pillarIndex}-${idx}`,
+      position: idx,
+      title: d.title.trim() || `Acción clave 0${idx + 1}`,
+      type: d.type,
+      isCompleted: pillar.actions[idx]?.isCompleted || false,
+      streakCount: pillar.actions[idx]?.streakCount || 0,
+      habitDays: pillar.actions[idx]?.habitDays || [false, false, false, false, false, false, false],
+    }));
+
+    onUpdateAllPillarActions(newActions);
+    setShowManualEditor(false);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] transition-colors">
+        
         {/* Header Bar */}
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 shrink-0">
+            <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 shrink-0">
               Pilar {pillarIndex + 1} de 8
             </span>
             <div className="min-w-0">
@@ -151,9 +212,9 @@ export const PillarFocusModal: React.FC<PillarFocusModalProps> = ({
           </div>
         </div>
 
-        {/* Progress Strip */}
-        <div className="px-6 py-3 bg-slate-100/60 dark:bg-slate-950/30 border-b border-slate-200 dark:border-slate-800/60 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 w-full max-w-md">
+        {/* Progress & Actions Toolbar Strip */}
+        <div className="px-6 py-3 bg-slate-100/60 dark:bg-slate-950/30 border-b border-slate-200 dark:border-slate-800/60 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 w-full max-w-sm">
             <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 rounded-full ${
@@ -171,39 +232,56 @@ export const PillarFocusModal: React.FC<PillarFocusModalProps> = ({
             </span>
           </div>
 
-          {/* Quick Regenerate button toggle */}
+          {/* Regenerate Action Buttons: AI & Manual */}
           <div className="flex items-center gap-2">
+            {/* 1. Regenerar con IA */}
             <button
               onClick={() => setShowRegenerateInput(!showRegenerateInput)}
-              className="text-xs font-medium text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-200 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 transition-colors flex items-center gap-1.5 cursor-pointer"
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                showRegenerateInput
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                  : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30'
+              }`}
+              title="Regenerar las 8 acciones de este pilar con IA"
             >
-              <Wand2 className="h-3.5 w-3.5" />
-              <span>Regenerar con otro enfoque</span>
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Regenerar con IA</span>
+            </button>
+
+            {/* 2. Regenerar Manualmente */}
+            <button
+              onClick={handleOpenManualEditor}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Reescribir o estructurar manualmente las 8 acciones"
+            >
+              <Edit3 className="h-3.5 w-3.5" />
+              <span>Regenerar Manualmente</span>
             </button>
           </div>
         </div>
 
-        {/* Optional Regenerate Input Box */}
+        {/* AI Regenerate Prompt Bar */}
         {showRegenerateInput && (
           <form
-            onSubmit={handleRunRegenerate}
-            className="p-4 bg-indigo-50/50 dark:bg-indigo-950/30 border-b border-indigo-200 dark:border-indigo-500/30 flex flex-col sm:flex-row items-center gap-3 animate-in fade-in"
+            onSubmit={(e) => handleRunRegenerate(e)}
+            className="p-4 bg-indigo-50/70 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-500/30 flex flex-col sm:flex-row items-center gap-3 animate-in fade-in"
           >
             <div className="relative flex-1 w-full">
               <input
                 type="text"
                 value={customFocusPrompt}
                 onChange={(e) => setCustomFocusPrompt(e.target.value)}
-                placeholder="Ej. 'Hazlas más técnicas', 'Enfócate en bajo coste', 'Más agresivo en ventas'..."
+                placeholder="Matiz de enfoque (opcional, ej. 'Hazlas más técnicas', 'Bajo coste', 'Orientado a ventas')..."
                 className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-indigo-500/40 rounded-lg px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 disabled={isRegenerating}
+                autoFocus
               />
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="submit"
                 disabled={isRegenerating}
-                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
               >
                 {isRegenerating ? (
                   <>
@@ -213,7 +291,7 @@ export const PillarFocusModal: React.FC<PillarFocusModalProps> = ({
                 ) : (
                   <>
                     <Sparkles className="h-3.5 w-3.5" />
-                    <span>Aplicar Enfoque</span>
+                    <span>{customFocusPrompt.trim() ? 'Aplicar Enfoque' : 'Regenerar Ahora'}</span>
                   </>
                 )}
               </button>
@@ -228,7 +306,7 @@ export const PillarFocusModal: React.FC<PillarFocusModalProps> = ({
           </form>
         )}
 
-        {/* Micro Grid Body: 8 Actions cards with Center Hub */}
+        {/* Micro Grid Body: 8 Actions cards */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {pillar.actions.map((action, idx) => {
@@ -368,7 +446,145 @@ export const PillarFocusModal: React.FC<PillarFocusModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
+        {/* MANUAL ACTIONS REGENERATION OVERLAY PANEL */}
+        {showManualEditor && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+              
+              {/* Modal Header */}
+              <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Regenerar Manualmente las Acciones de "{pillar.title}"
+                  </h4>
+                </div>
+                <button
+                  onClick={() => setShowManualEditor(false)}
+                  className="p-1 rounded text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-5 flex-1 overflow-y-auto space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Escribe o modifica las 8 acciones para este pilar:
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowManualPaste(!showManualPaste)}
+                      className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium transition-colors cursor-pointer"
+                    >
+                      📋 Pegar 8 líneas
+                    </button>
+                    <button
+                      onClick={() =>
+                        setManualDrafts((prev) =>
+                          prev.map((d) => ({ title: '', type: d.type }))
+                        )
+                      }
+                      className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-rose-600 dark:text-rose-400 font-medium transition-colors cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Paste Text Area */}
+                {showManualPaste && (
+                  <div className="p-3 bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 rounded-xl space-y-2 animate-in fade-in">
+                    <label className="text-[11px] font-semibold text-indigo-900 dark:text-indigo-200 block">
+                      Pega hasta 8 líneas de texto (una acción por línea):
+                    </label>
+                    <textarea
+                      value={manualPasteText}
+                      onChange={(e) => setManualPasteText(e.target.value)}
+                      rows={4}
+                      placeholder="Acción 1...&#10;Acción 2...&#10;Acción 3..."
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs text-slate-900 dark:text-white"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setShowManualPaste(false)}
+                        className="px-2.5 py-1 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={handleApplyManualPaste}
+                        className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg cursor-pointer"
+                      >
+                        Asignar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 8 Inputs */}
+                <div className="space-y-2">
+                  {manualDrafts.map((draft, idx) => (
+                    <div
+                      key={`manual-pillar-slot-${idx}`}
+                      className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/60"
+                    >
+                      <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 w-6 shrink-0">
+                        A{idx + 1}
+                      </span>
+                      <input
+                        type="text"
+                        value={draft.title}
+                        onChange={(e) => {
+                          const updated = [...manualDrafts];
+                          updated[idx].title = e.target.value;
+                          setManualDrafts(updated);
+                        }}
+                        placeholder={`Nombre de la acción ${idx + 1}...`}
+                        className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...manualDrafts];
+                          updated[idx].type = draft.type === 'recurring' ? 'one_time' : 'recurring';
+                          setManualDrafts(updated);
+                        }}
+                        className={`text-[10px] font-medium px-2 py-1 rounded shrink-0 cursor-pointer transition-colors ${
+                          draft.type === 'recurring'
+                            ? 'bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300'
+                            : 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
+                        }`}
+                        title="Alternar tipo"
+                      >
+                        {draft.type === 'recurring' ? 'Hábito' : 'Única'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setShowManualEditor(false)}
+                  className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveManualEditor}
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer"
+                >
+                  Guardar Acciones
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Footer */}
         <div className="px-6 py-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
           <span>
             Pilar: <strong className="text-slate-900 dark:text-white">{pillar.title}</strong> · Meta:{' '}
@@ -381,6 +597,7 @@ export const PillarFocusModal: React.FC<PillarFocusModalProps> = ({
             Volver a Matriz 9x9
           </button>
         </div>
+
       </div>
     </div>
   );

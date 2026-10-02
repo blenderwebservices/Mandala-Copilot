@@ -241,3 +241,23 @@ export function duplicateGoal(goal: Goal, newTitleSuffix = "(Copia)"): Goal {
   return cloned;
 }
 
+/**
+ * Generates a deterministic content fingerprint string to detect changes in a Goal.
+ */
+export function getGoalFingerprint(goal: Goal | null | undefined): string {
+  if (!goal) return "";
+  return JSON.stringify({
+    title: (goal.title || "").trim(),
+    context: (goal.context || "").trim(),
+    pillars: (goal.pillars || []).map((p) => ({
+      title: (p.title || "").trim(),
+      actions: (p.actions || []).map((a) => ({
+        title: (a.title || "").trim(),
+        type: a.type,
+        isCompleted: !!a.isCompleted,
+        streakCount: a.streakCount || 0,
+        habitDays: a.habitDays || [],
+      })),
+    })),
+  });
+}

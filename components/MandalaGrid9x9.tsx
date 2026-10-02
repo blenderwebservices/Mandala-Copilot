@@ -9,7 +9,8 @@ import {
   Flame,
   Zap,
   Info,
-  Layers
+  Layers,
+  Edit3
 } from 'lucide-react';
 
 interface MandalaGridProps {
@@ -19,6 +20,7 @@ interface MandalaGridProps {
   onGeneratePillarActions: (pillarIndex: number) => void;
   isGeneratingPillar: number | null;
   onOpenCheckin: () => void;
+  onOpenMainGoalModal: () => void;
 }
 
 export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
@@ -28,6 +30,7 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
   onGeneratePillarActions,
   isGeneratingPillar,
   onOpenCheckin,
+  onOpenMainGoalModal,
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'pending' | 'recurring' | 'one_time'>('all');
   const [hoveredAction, setHoveredAction] = useState<{ pillarTitle: string; action: MandalaAction } | null>(null);
@@ -99,9 +102,19 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
                 {completedActions} de {totalActions} acciones ({overallProgress}%)
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white text-balance">
-              {goal.title}
-            </h1>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white text-balance">
+                {goal.title}
+              </h1>
+              <button
+                onClick={onOpenMainGoalModal}
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
+                title="Abrir formulario de la Meta Principal para editar o regenerar con IA"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Editar y Regenerar Meta</span>
+              </button>
+            </div>
             {goal.context && (
               <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1">{goal.context}</p>
             )}
@@ -276,17 +289,27 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
                         ].map((cell, idx) => {
                           if (cell.isCenterGoal) {
                             return (
-                              <div
+                              <button
+                                type="button"
                                 key={`core-goal-cell`}
-                                className="col-span-1 row-span-1 rounded-lg bg-indigo-600 dark:bg-indigo-600/30 border-2 border-indigo-600 dark:border-indigo-400 p-2 flex flex-col items-center justify-center text-center shadow-inner group"
+                                onClick={onOpenMainGoalModal}
+                                className="col-span-1 row-span-1 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 dark:from-indigo-600/80 dark:to-indigo-800/80 border-2 border-indigo-400 dark:border-indigo-400 p-2 flex flex-col items-center justify-between text-center shadow-lg shadow-indigo-600/25 hover:scale-[1.04] hover:border-white transition-all group cursor-pointer relative overflow-hidden"
+                                title="Abrir formulario de la Meta Principal (Editar y Regenerar con IA)"
                               >
-                                <span className="text-[9px] font-extrabold text-indigo-100 dark:text-indigo-200 uppercase tracking-widest mb-0.5">
-                                  META
-                                </span>
-                                <span className="text-xs font-bold text-white line-clamp-3 leading-tight">
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="text-[8px] font-extrabold text-indigo-100 uppercase tracking-widest px-1 py-0.2 rounded bg-indigo-500/40">
+                                    META
+                                  </span>
+                                  <Sparkles className="h-3 w-3 text-indigo-200 group-hover:text-white transition-colors" />
+                                </div>
+                                <span className="text-xs font-bold text-white line-clamp-3 leading-tight my-auto px-0.5">
                                   {goal.title}
                                 </span>
-                              </div>
+                                <span className="text-[8.5px] font-medium text-indigo-200/90 group-hover:text-white flex items-center gap-1">
+                                  <Edit3 className="h-2.5 w-2.5" />
+                                  <span>Editar / IA</span>
+                                </span>
+                              </button>
                             );
                           }
 
@@ -353,6 +376,17 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
                         <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300">
                           {progress}%
                         </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onGeneratePillarActions(pIdx);
+                          }}
+                          disabled={isGenerating}
+                          className="p-1 rounded text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-slate-200/80 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          title="Regenerar las 8 acciones de este pilar con IA"
+                        >
+                          <Sparkles className={`h-3 w-3 ${isGenerating ? 'animate-spin text-indigo-600' : ''}`} />
+                        </button>
                         <button
                           onClick={() => onSelectPillar(pIdx)}
                           className="p-1 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-200/80 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors cursor-pointer"

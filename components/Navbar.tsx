@@ -13,8 +13,10 @@ import {
   Grid3X3,
   ChevronDown,
   FolderOpen,
-  Save
+  Save,
+  Copy
 } from "lucide-react";
+import { DocumentModalTab } from "./DocumentManagerModal";
 
 interface NavbarProps {
   currentGoal: Goal;
@@ -30,7 +32,8 @@ interface NavbarProps {
   aiStatus: GeminiStatusResult | null;
   isLoadingAiStatus: boolean;
   onOpenAiStatus: () => void;
-  onOpenDocumentModal: (tab?: "open" | "save") => void;
+  onOpenDocumentModal: (tab?: DocumentModalTab) => void;
+  hasUnsavedChanges?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -48,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isLoadingAiStatus,
   onOpenAiStatus,
   onOpenDocumentModal,
+  hasUnsavedChanges = false,
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-[#0b0f17]/90 backdrop-blur-md transition-colors duration-150">
@@ -90,11 +94,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Document: Save */}
           <button
             onClick={() => onOpenDocumentModal("save")}
-            className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors flex items-center gap-1.5 text-slate-600 dark:text-slate-400 cursor-pointer"
-            title="Guardar documento actual o descargar archivo [Cmd+S]"
+            className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors flex items-center gap-1.5 text-slate-600 dark:text-slate-400 cursor-pointer relative"
+            title={hasUnsavedChanges ? "Guardar cambios recientes [Cmd+S]" : "Guardar documento actual [Cmd+S]"}
           >
             <Save className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-            Guardar
+            <span>Guardar</span>
+            {hasUnsavedChanges && (
+              <span
+                className="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0"
+                title="Cambios recientes pendientes de guardar"
+              />
+            )}
+          </button>
+
+          {/* Document: Save As */}
+          <button
+            onClick={() => onOpenDocumentModal("saveAs")}
+            className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors flex items-center gap-1.5 text-slate-600 dark:text-slate-400 cursor-pointer"
+            title="Guardar con otro nombre (Copia independiente) [Cmd+Shift+S]"
+          >
+            <Copy className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+            <span>Guardar como...</span>
           </button>
 
           <button
@@ -126,23 +146,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Zone 3: Actions, AI Status, Theme & Profile */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Quick Document Icons */}
-          <div className="flex items-center gap-0.5 border-r border-slate-200 dark:border-slate-800 pr-1.5 sm:pr-2">
-            <button
-              onClick={() => onOpenDocumentModal("open")}
-              className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              title="Abrir documento (Cmd+O)"
-            >
-              <FolderOpen className="h-4 w-4 text-sky-500 dark:text-sky-400" />
-            </button>
-            <button
-              onClick={() => onOpenDocumentModal("save")}
-              className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              title="Guardar documento (Cmd+S)"
-            >
-              <Save className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-            </button>
-          </div>
 
           {/* AI Status Badge */}
           <AiStatusBadge
