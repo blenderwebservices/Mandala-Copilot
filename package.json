@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch server.ts",
-    "build": "vite build",
+    "build": "vite build && esbuild server.ts --platform=node --format=esm --outfile=server.js --packages=external",
     "preview": "vite preview",
     "start": "node server.js",
     "clean": "rm -rf dist server.js",
