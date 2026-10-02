@@ -74,25 +74,25 @@ export const RecalibrateModal: React.FC<RecalibrateModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in">
+      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+            <div className="h-7 w-7 rounded-lg bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-500/30">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white tracking-tight">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
                 Recalibración Adaptativa con IA
               </h2>
-              <p className="text-[11px] text-slate-400">
-                Pilar: <span className="text-slate-300 font-semibold">{pillarTitle}</span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Pilar: <span className="text-slate-700 dark:text-slate-300 font-semibold">{pillarTitle}</span>
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -101,12 +101,12 @@ export const RecalibrateModal: React.FC<RecalibrateModalProps> = ({
         {/* Content */}
         <div className="p-6 space-y-5">
           {/* Action in Question Card */}
-          <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-950/20 space-y-1">
-            <span className="text-[10px] font-mono font-semibold uppercase text-amber-300">
+          <div className="p-3.5 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 space-y-1">
+            <span className="text-[10px] font-mono font-semibold uppercase text-amber-800 dark:text-amber-300">
               Acción con Fricción o Estancamiento
             </span>
-            <p className="text-sm font-bold text-white">{action.title}</p>
-            <div className="flex items-center gap-2 text-[11px] text-amber-200/80">
+            <p className="text-sm font-bold text-slate-900 dark:text-white">{action.title}</p>
+            <div className="flex items-center gap-2 text-[11px] text-amber-800/80 dark:text-amber-200/80">
               <span>Tipo: {action.type === 'recurring' ? 'Hábito Recurrente' : 'Tarea Única'}</span>
               <span>·</span>
               <span>Posición A{actionIndex + 1}</span>
@@ -117,7 +117,7 @@ export const RecalibrateModal: React.FC<RecalibrateModalProps> = ({
             // Form to diagnose
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-2">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-2">
                   ¿Cuál es la causa del bloqueo o retraso?
                 </label>
                 <div className="space-y-2">
@@ -129,10 +129,10 @@ export const RecalibrateModal: React.FC<RecalibrateModalProps> = ({
                         setSelectedReason(reason);
                         setCustomReason('');
                       }}
-                      className={`w-full p-2.5 rounded-lg text-left text-xs transition-colors border ${
+                      className={`w-full p-2.5 rounded-lg text-left text-xs transition-colors border cursor-pointer ${
                         selectedReason === reason && !customReason
-                          ? 'bg-indigo-600/20 border-indigo-500 text-white font-medium'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                          ? 'bg-indigo-50 dark:bg-indigo-600/20 border-indigo-400 dark:border-indigo-500 text-indigo-900 dark:text-white font-medium shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
                       }`}
                     >
                       {reason}
@@ -142,7 +142,7 @@ export const RecalibrateModal: React.FC<RecalibrateModalProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1.5">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
                   O describe tu situación con tus palabras (opcional):
                 </label>
                 <input
@@ -150,22 +150,22 @@ export const RecalibrateModal: React.FC<RecalibrateModalProps> = ({
                   value={customReason}
                   onChange={(e) => setCustomReason(e.target.value)}
                   placeholder="Ej. 'Me cuesta mucho ponerme 2 horas seguidas, prefiero pasos de 20 minutos'..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-xs text-slate-400 hover:text-white"
+                  className="px-4 py-2 text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleRunRecalibration}
                   disabled={isLoading}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-950 disabled:opacity-50"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-600/20 dark:shadow-indigo-950 disabled:opacity-50 cursor-pointer"
                 >
                   {isLoading ? (
                     <>
@@ -185,26 +185,26 @@ export const RecalibrateModal: React.FC<RecalibrateModalProps> = ({
             // Results & Replacement Proposal
             <div className="space-y-4 animate-in fade-in">
               {/* Diagnosis */}
-              <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/70 space-y-1">
-                <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 space-y-1">
+                <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-xs font-semibold">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
                   <span>Diagnóstico del Cuello de Botella</span>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">{result.diagnosis}</p>
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{result.diagnosis}</p>
               </div>
 
               {/* Recommendation */}
-              <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/70 space-y-1">
-                <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold">
-                  <Lightbulb className="h-3.5 w-3.5 text-indigo-400" />
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 space-y-1">
+                <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-xs font-semibold">
+                  <Lightbulb className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Recomendación Táctica</span>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">{result.recommendation}</p>
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{result.recommendation}</p>
               </div>
 
               {/* Proposed Replacement Actions */}
               <div className="space-y-2">
-                <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                   <SplitSquareVertical className="h-3.5 w-3.5" />
                   Sustitución Sugerida (Micro-acciones de baja fricción):
                 </span>
@@ -212,13 +212,13 @@ export const RecalibrateModal: React.FC<RecalibrateModalProps> = ({
                   {result.replacementActions.map((rep, rIdx) => (
                     <div
                       key={`rep-act-${rIdx}`}
-                      className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 flex items-center justify-between gap-3"
+                      className="p-3 rounded-lg border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                        <span className="text-xs font-medium text-white">{rep.title}</span>
+                        <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span className="text-xs font-medium text-slate-900 dark:text-white">{rep.title}</span>
                       </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 shrink-0">
                         {rep.type === 'recurring' ? 'Hábito' : 'Una vez'}
                       </span>
                     </div>
@@ -227,23 +227,23 @@ export const RecalibrateModal: React.FC<RecalibrateModalProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <button
                   onClick={() => setResult(null)}
-                  className="text-xs text-slate-400 hover:text-slate-200"
+                  className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
                 >
                   ← Modificar motivo
                 </button>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={onClose}
-                    className="px-3 py-2 text-xs text-slate-400 hover:text-white"
+                    className="px-3 py-2 text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
                   >
                     Descartar
                   </button>
                   <button
                     onClick={handleApply}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-md shadow-emerald-950"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-md shadow-emerald-600/20 dark:shadow-emerald-950 cursor-pointer"
                   >
                     <Check className="h-3.5 w-3.5" />
                     <span>Aplicar Sustitución al Mandala</span>

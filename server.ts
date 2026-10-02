@@ -14,7 +14,17 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+// Security Headers Middleware (Pilar 8 - Checklist 15)
+app.use((_req, res, next) => {
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "geolocation=(), camera=(), microphone=(), payment=()");
+  next();
+});
+
+// Explicit JSON request body size limit to prevent memory exhaustion (DoS)
+app.use(express.json({ limit: "1mb" }));
 
 // Helper to dynamically read latest configuration from .env
 function loadEnvConfig() {
@@ -153,28 +163,48 @@ app.post("/api/gemini-status", async (req: Request, res: Response) => {
   const { apiKey, model, saveToEnv } = req.body;
 
   if (saveToEnv && typeof apiKey === "string" && apiKey.trim() !== "") {
+    const cleanKey = apiKey.trim();
+
+    // Strict validation to prevent .env file injection (Pilar 8)
+    if (!/^[a-zA-Z0-9_\-\.]{8,256}$/.test(cleanKey)) {
+      return res.status(400).json({
+        ok: false,
+        status: "invalid_key_format",
+        message: "Formato de API Key no válido. No se permiten espacios, saltos de línea ni caracteres de control.",
+      });
+    }
+
+    const cleanModel = typeof model === "string" ? model.trim() : "";
+    if (cleanModel && !/^[a-zA-Z0-9\.\-]{3,60}$/.test(cleanModel)) {
+      return res.status(400).json({
+        ok: false,
+        status: "invalid_model_format",
+        message: "Identificador de modelo no válido.",
+      });
+    }
+
     try {
       const envPath = path.resolve(__dirname, ".env");
       let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
 
-      // Replace or append GEMINI_API_KEY
+      // Replace or append GEMINI_API_KEY safely
       if (/^GEMINI_API_KEY=.*$/m.test(content)) {
-        content = content.replace(/^GEMINI_API_KEY=.*$/m, `GEMINI_API_KEY="${apiKey.trim()}"`);
+        content = content.replace(/^GEMINI_API_KEY=.*$/m, `GEMINI_API_KEY="${cleanKey}"`);
       } else {
-        content += `\nGEMINI_API_KEY="${apiKey.trim()}"\n`;
+        content += `\nGEMINI_API_KEY="${cleanKey}"\n`;
       }
 
-      // Replace or append GEMINI_MODEL if specified
-      if (model && typeof model === "string" && model.trim() !== "") {
+      // Replace or append GEMINI_MODEL if specified safely
+      if (cleanModel) {
         if (/^GEMINI_MODEL=.*$/m.test(content)) {
-          content = content.replace(/^GEMINI_MODEL=.*$/m, `GEMINI_MODEL="${model.trim()}"`);
+          content = content.replace(/^GEMINI_MODEL=.*$/m, `GEMINI_MODEL="${cleanModel}"`);
         } else {
-          content += `\nGEMINI_MODEL="${model.trim()}"\n`;
+          content += `\nGEMINI_MODEL="${cleanModel}"\n`;
         }
       }
 
       fs.writeFileSync(envPath, content, "utf8");
-      console.log("💾 Updated .env file with new Gemini configuration");
+      console.log("💾 Updated .env file safely with validated Gemini configuration");
     } catch (saveErr: any) {
       console.error("Failed to write to .env:", saveErr);
     }
@@ -187,12 +217,17 @@ app.post("/api/gemini-status", async (req: Request, res: Response) => {
 // Live prompt execution test (Playground)
 app.post("/api/gemini-test-prompt", async (req: Request, res: Response) => {
   const { prompt, model, apiKey } = req.body;
-  if (!prompt || typeof prompt !== "string") {
+  if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
     return res.status(400).json({ error: "prompt is required" });
   }
 
+  // Prevent token exhaustion DoS
+  if (prompt.length > 2000) {
+    return res.status(400).json({ error: "El prompt supera el límite permitido de 2,000 caracteres." });
+  }
+
   const { model: envModel } = loadEnvConfig();
-  const modelToUse = model || envModel;
+  const modelToUse = (typeof model === "string" && /^[a-zA-Z0-9\.\-]{3,60}$/.test(model.trim())) ? model.trim() : envModel;
   const ai = getAiClient(apiKey);
 
   const t0 = Date.now();
@@ -228,17 +263,22 @@ app.post("/api/gemini-test-prompt", async (req: Request, res: Response) => {
 app.post("/api/generate-pillars", async (req: Request, res: Response) => {
   const { goalTitle, goalContext, focusPrompt } = req.body;
 
-  if (!goalTitle) {
+  if (!goalTitle || typeof goalTitle !== "string" || !goalTitle.trim()) {
     return res.status(400).json({ error: "goalTitle is required" });
   }
+
+  // Bound user inputs to prevent prompt ballooning / token exhaustion
+  const safeGoalTitle = goalTitle.trim().substring(0, 300);
+  const safeGoalContext = typeof goalContext === "string" ? goalContext.trim().substring(0, 1500) : "";
+  const safeFocusPrompt = typeof focusPrompt === "string" ? focusPrompt.trim().substring(0, 500) : "";
 
   const { model } = loadEnvConfig();
   const ai = getAiClient();
 
   try {
-    const prompt = `Meta principal: "${goalTitle}".
-Contexto adicional: "${goalContext || "Sin contexto adicional"}".
-${focusPrompt ? `Instrucción especial de enfoque: "${focusPrompt}".` : ""}
+    const prompt = `Meta principal: "${safeGoalTitle}".
+Contexto adicional: "${safeGoalContext || "Sin contexto adicional"}".
+${safeFocusPrompt ? `Instrucción especial de enfoque: "${safeFocusPrompt}".` : ""}
 Genera exactamente 8 pilares estratégicos y mutuamente excluyentes para el método Mandala Chart 9x9.
 Cada pilar debe ser un título conciso en español de 1 a 4 palabras.`;
 
@@ -306,18 +346,32 @@ Debes devolver ÚNICAMENTE un arreglo JSON con exactamente 8 cadenas de texto co
 app.post("/api/generate-actions", async (req: Request, res: Response) => {
   const { goalTitle, pillarTitle, allPillars, focusPrompt } = req.body;
 
-  if (!goalTitle || !pillarTitle) {
-    return res.status(400).json({ error: "goalTitle and pillarTitle are required" });
+  if (
+    !goalTitle ||
+    typeof goalTitle !== "string" ||
+    !goalTitle.trim() ||
+    !pillarTitle ||
+    typeof pillarTitle !== "string" ||
+    !pillarTitle.trim()
+  ) {
+    return res.status(400).json({ error: "goalTitle and pillarTitle are required strings" });
   }
+
+  const safeGoalTitle = goalTitle.trim().substring(0, 300);
+  const safePillarTitle = pillarTitle.trim().substring(0, 200);
+  const safeFocusPrompt = typeof focusPrompt === "string" ? focusPrompt.trim().substring(0, 500) : "";
+  const safeAllPillars = Array.isArray(allPillars)
+    ? allPillars.slice(0, 16).map((p) => String(p).substring(0, 100))
+    : undefined;
 
   const { model } = loadEnvConfig();
   const ai = getAiClient();
 
   try {
-    const prompt = `Meta principal: "${goalTitle}".
-Pilar estratégico: "${pillarTitle}".
-Otros pilares existentes: ${allPillars ? JSON.stringify(allPillars) : "No especificados"}.
-${focusPrompt ? `Instrucción de refinamiento o enfoque: "${focusPrompt}".` : ""}
+    const prompt = `Meta principal: "${safeGoalTitle}".
+Pilar estratégico: "${safePillarTitle}".
+Otros pilares existentes: ${safeAllPillars ? JSON.stringify(safeAllPillars) : "No especificados"}.
+${safeFocusPrompt ? `Instrucción de refinamiento o enfoque: "${safeFocusPrompt}".` : ""}
 Genera exactamente 8 acciones concretas, medibles y realizables para este pilar.
 Clasifica cada una como "one_time" (tarea puntual que se completa una vez) o "recurring" (hábito, rutina diaria o semanal).`;
 

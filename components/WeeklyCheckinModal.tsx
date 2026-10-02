@@ -108,25 +108,25 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in flex flex-col max-h-[90vh] transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+            <div className="h-7 w-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-500/30">
               <Calendar className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white tracking-tight">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
                 Check-in Semanal Adaptativo
               </h2>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Auditoría de consistencia y balance del Mandala 9x9
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -136,33 +136,33 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
         <div className="p-6 overflow-y-auto space-y-6">
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-950/60">
-              <span className="text-[10px] text-slate-400 block mb-1">Avance Global</span>
-              <p className="text-xl font-bold font-mono text-white">{overallPercent}%</p>
+            <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shadow-xs">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1">Avance Global</span>
+              <p className="text-xl font-bold font-mono text-slate-900 dark:text-white">{overallPercent}%</p>
               <span className="text-[10px] text-slate-500 font-mono">
                 {completedActions}/{totalActions} tareas
               </span>
             </div>
 
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-950/60">
-              <span className="text-[10px] text-slate-400 block mb-1">Tareas Únicas</span>
-              <p className="text-xl font-bold font-mono text-indigo-400">
+            <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shadow-xs">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1">Tareas Únicas</span>
+              <p className="text-xl font-bold font-mono text-indigo-600 dark:text-indigo-400">
                 {completedOneTime}/{totalOneTime}
               </p>
               <span className="text-[10px] text-slate-500 font-mono">Hitos completados</span>
             </div>
 
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-950/60">
-              <span className="text-[10px] text-slate-400 block mb-1">Hábitos Activos</span>
-              <p className="text-xl font-bold font-mono text-teal-400">
+            <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shadow-xs">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1">Hábitos Activos</span>
+              <p className="text-xl font-bold font-mono text-teal-600 dark:text-teal-400">
                 {activeRecurring}/{totalRecurring}
               </p>
               <span className="text-[10px] text-slate-500 font-mono">Con racha positiva</span>
             </div>
 
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-950/60">
-              <span className="text-[10px] text-slate-400 block mb-1">Cuadrantes 100%</span>
-              <p className="text-xl font-bold font-mono text-emerald-400">
+            <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shadow-xs">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1">Cuadrantes 100%</span>
+              <p className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
                 {pillarBreakdown.filter((p) => p.progress === 100).length}/8
               </p>
               <span className="text-[10px] text-slate-500 font-mono">Pilares concluidos</span>
@@ -172,15 +172,15 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
           {/* AI Analysis Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                 Diagnóstico del Copiloto IA
               </span>
               {!checkinResult && (
                 <button
                   onClick={handleRunAiEvaluation}
                   disabled={isLoading}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-900 disabled:opacity-50"
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-600/20 dark:shadow-indigo-900 disabled:opacity-50 cursor-pointer"
                 >
                   {isLoading ? (
                     <>
@@ -200,23 +200,23 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
             {checkinResult ? (
               <div className="space-y-3 animate-in fade-in">
                 {/* Overall Assessment */}
-                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/80 space-y-1">
-                  <span className="text-[10px] font-mono text-indigo-400 uppercase font-semibold">
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 space-y-1">
+                  <span className="text-[10px] font-mono text-indigo-700 dark:text-indigo-400 uppercase font-semibold">
                     Evaluación de Tracción
                   </span>
-                  <p className="text-xs text-slate-200 leading-relaxed">
+                  <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed">
                     {checkinResult.overallAssessment}
                   </p>
                 </div>
 
                 {/* Bottleneck Warning */}
                 {checkinResult.bottleneck && (
-                  <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-950/20 space-y-1">
-                    <div className="flex items-center gap-1.5 text-amber-400 text-xs font-semibold">
+                  <div className="p-3.5 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 space-y-1">
+                    <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-400 text-xs font-semibold">
                       <AlertTriangle className="h-3.5 w-3.5" />
                       <span>Cuello de Botella Detectado</span>
                     </div>
-                    <p className="text-xs text-amber-200/90 leading-relaxed">
+                    <p className="text-xs text-amber-900 dark:text-amber-200/90 leading-relaxed">
                       {checkinResult.bottleneck}
                     </p>
                   </div>
@@ -224,28 +224,28 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
 
                 {/* Key Wins & Adjustments */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-950/15 space-y-2">
-                    <span className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                  <div className="p-3.5 rounded-xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/15 space-y-2">
+                    <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
                       <Award className="h-3.5 w-3.5" /> Victorias Clave
                     </span>
-                    <ul className="space-y-1 text-xs text-slate-300">
+                    <ul className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
                       {checkinResult.keyWins?.map((win, wIdx) => (
                         <li key={wIdx} className="flex items-start gap-1.5">
-                          <span className="text-emerald-400">✓</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
                           <span>{win}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-indigo-500/30 bg-indigo-950/15 space-y-2">
-                    <span className="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
+                  <div className="p-3.5 rounded-xl border border-indigo-300 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/15 space-y-2">
+                    <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
                       <TrendingUp className="h-3.5 w-3.5" /> Ajustes Sugeridos
                     </span>
-                    <ul className="space-y-1 text-xs text-slate-300">
+                    <ul className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
                       {checkinResult.nextActions?.map((act, aIdx) => (
                         <li key={aIdx} className="flex items-start gap-1.5">
-                          <span className="text-indigo-400">→</span>
+                          <span className="text-indigo-600 dark:text-indigo-400 font-bold">→</span>
                           <span>{act}</span>
                         </li>
                       ))}
@@ -254,7 +254,7 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
                 </div>
 
                 {/* Motivational Quote */}
-                <div className="p-3 rounded-lg border border-slate-800 bg-slate-950/40 text-center text-xs text-slate-400 italic">
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-center text-xs text-slate-600 dark:text-slate-400 italic">
                   "{checkinResult.motivationalNote}"
                 </div>
 
@@ -262,7 +262,7 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
                   <button
                     onClick={handleRunAiEvaluation}
                     disabled={isLoading}
-                    className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                    className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 cursor-pointer"
                   >
                     <RotateCw className="h-3 w-3" />
                     <span>Volver a evaluar</span>
@@ -270,8 +270,8 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="p-5 rounded-xl border border-dashed border-slate-800 bg-slate-950/40 text-center space-y-2">
-                <p className="text-xs text-slate-400">
+              <div className="p-5 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 text-center space-y-2">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   Haz clic en "Generar Evaluación IA" para que el Copiloto examine el balance entre tus 8 pilares, detecte inconsistencias de hábitos y sugiera el plan de acción para los próximos 7 días.
                 </p>
               </div>
@@ -279,23 +279,23 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
           </div>
 
           {/* Quadrant Progress Breakdown */}
-          <div className="space-y-2 pt-2 border-t border-slate-800">
-            <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1">
+          <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-1">
               Desglose por Cuadrante (8 Pilares)
             </span>
             <div className="space-y-2">
               {pillarBreakdown.map((p) => (
                 <div
                   key={p.index}
-                  className="p-2.5 rounded-lg border border-slate-800 bg-slate-950/50 flex items-center justify-between gap-3 hover:border-slate-700 transition-colors"
+                  className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 flex items-center justify-between gap-3 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="text-xs font-mono font-bold text-slate-500">0{p.index + 1}</span>
-                    <span className="text-xs font-medium text-slate-200 truncate">{p.title}</span>
+                    <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500">0{p.index + 1}</span>
+                    <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">{p.title}</span>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="w-24 bg-slate-800 rounded-full h-1.5 overflow-hidden hidden sm:block">
+                    <div className="w-24 bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden hidden sm:block">
                       <div
                         className={`h-full rounded-full ${
                           p.progress === 100
@@ -307,7 +307,7 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
                         style={{ width: `${p.progress}%` }}
                       />
                     </div>
-                    <span className="text-xs font-mono font-semibold text-slate-300 w-10 text-right">
+                    <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 w-10 text-right">
                       {p.progress}%
                     </span>
                     <button
@@ -315,7 +315,7 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
                         onClose();
                         onJumpToPillar(p.index);
                       }}
-                      className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-0.5 ml-1"
+                      className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium flex items-center gap-0.5 ml-1 cursor-pointer"
                     >
                       <span>Abrir</span>
                       <ArrowRight className="h-3 w-3" />
@@ -328,10 +328,10 @@ export const WeeklyCheckinModal: React.FC<WeeklyCheckinModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-slate-950 border-t border-slate-800 flex items-center justify-end">
+        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition-colors"
+            className="px-4 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-medium transition-colors cursor-pointer"
           >
             Cerrar
           </button>

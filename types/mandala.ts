@@ -42,14 +42,14 @@ export interface MandalaDocument {
 
 
 export const PILLAR_COLORS = [
-  { name: 'Sky', bg: 'bg-sky-500/10', border: 'border-sky-500/30', text: 'text-sky-400', badge: 'bg-sky-500/20 text-sky-300' },
-  { name: 'Indigo', bg: 'bg-indigo-500/10', border: 'border-indigo-500/30', text: 'text-indigo-400', badge: 'bg-indigo-500/20 text-indigo-300' },
-  { name: 'Violet', bg: 'bg-violet-500/10', border: 'border-violet-500/30', text: 'text-violet-400', badge: 'bg-violet-500/20 text-violet-300' },
-  { name: 'Fuchsia', bg: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/30', text: 'text-fuchsia-400', badge: 'bg-fuchsia-500/20 text-fuchsia-300' },
-  { name: 'Rose', bg: 'bg-rose-500/10', border: 'border-rose-500/30', text: 'text-rose-400', badge: 'bg-rose-500/20 text-rose-300' },
-  { name: 'Amber', bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
-  { name: 'Emerald', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-300' },
-  { name: 'Teal', bg: 'bg-teal-500/10', border: 'border-teal-500/30', text: 'text-teal-400', badge: 'bg-teal-500/20 text-teal-300' },
+  { name: 'Sky', bg: 'bg-sky-50 dark:bg-sky-500/10', border: 'border-sky-300 dark:border-sky-500/30', text: 'text-sky-700 dark:text-sky-400', badge: 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-300' },
+  { name: 'Indigo', bg: 'bg-indigo-50 dark:bg-indigo-500/10', border: 'border-indigo-300 dark:border-indigo-500/30', text: 'text-indigo-700 dark:text-indigo-400', badge: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300' },
+  { name: 'Violet', bg: 'bg-violet-50 dark:bg-violet-500/10', border: 'border-violet-300 dark:border-violet-500/30', text: 'text-violet-700 dark:text-violet-400', badge: 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300' },
+  { name: 'Fuchsia', bg: 'bg-fuchsia-50 dark:bg-fuchsia-500/10', border: 'border-fuchsia-300 dark:border-fuchsia-500/30', text: 'text-fuchsia-700 dark:text-fuchsia-400', badge: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-500/20 dark:text-fuchsia-300' },
+  { name: 'Rose', bg: 'bg-rose-50 dark:bg-rose-500/10', border: 'border-rose-300 dark:border-rose-500/30', text: 'text-rose-700 dark:text-rose-400', badge: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300' },
+  { name: 'Amber', bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-300 dark:border-amber-500/30', text: 'text-amber-800 dark:text-amber-400', badge: 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300' },
+  { name: 'Emerald', bg: 'bg-emerald-50 dark:bg-emerald-500/10', border: 'border-emerald-300 dark:border-emerald-500/30', text: 'text-emerald-800 dark:text-emerald-400', badge: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-300' },
+  { name: 'Teal', bg: 'bg-teal-50 dark:bg-teal-500/10', border: 'border-teal-300 dark:border-teal-500/30', text: 'text-teal-800 dark:text-teal-400', badge: 'bg-teal-100 text-teal-900 dark:bg-teal-500/20 dark:text-teal-300' },
 ];
 
 // Presets for instant inspiration

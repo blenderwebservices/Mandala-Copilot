@@ -22,20 +22,35 @@ import {
 } from './services/api';
 import { AiStatusModal } from './components/AiStatusModal';
 import { DocumentManagerModal, DocumentModalTab } from './components/DocumentManagerModal';
-import { downloadDocumentFile, duplicateGoal } from './services/documentService';
+import { downloadDocumentFile, duplicateGoal, stripPollution } from './services/documentService';
 import { AlertCircle, Key, X } from 'lucide-react';
 
 const STORAGE_KEY = 'mandala_copilot_goals_v1';
 const TIER_STORAGE_KEY = 'mandala_copilot_tier_v1';
 
 export default function App() {
-  // Load goals from localStorage or fallback to preset
+  // Load goals from localStorage or fallback to preset with schema validation (Pilar 5 & 13)
   const [goals, setGoals] = useState<Goal[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        const rawParsed = JSON.parse(stored);
+        if (Array.isArray(rawParsed) && rawParsed.length > 0) {
+          // Strictly validate structural integrity of each goal
+          const validGoals = rawParsed.filter(
+            (g) =>
+              g &&
+              typeof g === 'object' &&
+              typeof g.id === 'string' &&
+              typeof g.title === 'string' &&
+              Array.isArray(g.pillars) &&
+              g.pillars.length > 0 &&
+              g.pillars.every((p: any) => p && typeof p === 'object' && Array.isArray(p.actions))
+          );
+          if (validGoals.length > 0) {
+            return stripPollution(validGoals);
+          }
+        }
       }
     } catch (e) {
       console.error('Error loading saved goals:', e);
@@ -453,7 +468,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150">
       {/* Top Navbar */}
       <Navbar
         currentGoal={currentGoal}
@@ -479,19 +494,19 @@ export default function App() {
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         {/* Warning notification banner if Gemini is not working */}
         {aiStatus && !aiStatus.ok && !isBannerDismissed && (
-          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-950/20 p-3 sm:p-4 text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-amber-950/20 backdrop-blur-sm">
+          <div className="mb-6 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 p-3 sm:p-4 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm dark:shadow-lg dark:shadow-amber-950/20 backdrop-blur-sm transition-colors">
             <div className="flex items-start sm:items-center gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30">
                 <AlertCircle className="h-4 w-4" />
               </div>
               <div className="text-xs sm:text-sm">
-                <span className="font-semibold text-amber-100">
+                <span className="font-semibold text-amber-950 dark:text-amber-100">
                   {aiStatus.status === 'placeholder_key' 
                     ? "GEMINI_API_KEY no configurada:" 
                     : "Google Gemini no conectado:"}
                 </span>{" "}
-                <span className="text-amber-300">{aiStatus.message}</span>{" "}
-                <span className="text-slate-400 block sm:inline">
+                <span className="text-amber-800 dark:text-amber-300 font-medium">{aiStatus.message}</span>{" "}
+                <span className="text-slate-600 dark:text-slate-400 block sm:inline">
                   (El generador usará plantillas estáticas de respaldo)
                 </span>
               </div>
@@ -508,7 +523,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsBannerDismissed(true)}
-                className="p-1 rounded-lg text-amber-400/80 hover:text-white hover:bg-amber-900/40 transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-amber-700/80 hover:text-amber-950 hover:bg-amber-100 dark:text-amber-400/80 dark:hover:text-white dark:hover:bg-amber-900/40 transition-colors cursor-pointer"
                 title="Descartar aviso"
               >
                 <X className="h-4 w-4" />
@@ -546,7 +561,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-[#070a0f] py-4 px-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-[#070a0f] py-4 px-6 text-center text-xs text-slate-500 dark:text-slate-500 transition-colors">
         <p>
           Mandala Copilot AI · Metodología Harada 9x9 con Recalibración Adaptativa Continua
         </p>

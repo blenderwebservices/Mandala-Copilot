@@ -118,40 +118,40 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
       <div 
-        className="relative w-full max-w-2xl rounded-2xl border border-slate-800 bg-[#0f172a] p-6 shadow-2xl shadow-indigo-950/40 max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a] p-6 shadow-2xl shadow-slate-900/10 dark:shadow-indigo-950/40 max-h-[90vh] overflow-y-auto transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl border ${
               isConnected 
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                : "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500 dark:text-emerald-400"
+                : "bg-amber-500/10 border-amber-500/30 text-amber-500 dark:text-amber-400"
             }`}>
               {isConnected ? <Sparkles className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 Estado de Google Gemini AI
                 <span className={`text-xs px-2 py-0.5 rounded-full font-mono font-medium ${
                   isConnected 
-                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                    : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    ? "bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                    : "bg-amber-500/15 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30"
                 }`}>
                   {isConnected ? "En línea / Activo" : "Requiere Atención"}
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Monitoreo en tiempo real de API Key, modelo activo y latencia de respuesta
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -161,19 +161,19 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
         <div className="mt-5 space-y-4">
           <div className={`rounded-xl border p-4 ${
             isConnected
-              ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-200"
+              ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-200"
               : isPlaceholder
-              ? "bg-amber-950/20 border-amber-500/30 text-amber-200"
-              : "bg-rose-950/20 border-rose-500/30 text-rose-200"
+              ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-200"
+              : "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-500/30 text-rose-800 dark:text-rose-200"
           }`}>
             <div className="flex items-start gap-3">
               <div className="shrink-0 mt-0.5">
                 {isConnected ? (
-                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
                 ) : isPlaceholder ? (
-                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                  <AlertTriangle className="h-5 w-5 text-amber-500 dark:text-amber-400" />
                 ) : (
-                  <AlertCircle className="h-5 w-5 text-rose-400" />
+                  <AlertCircle className="h-5 w-5 text-rose-500 dark:text-rose-400" />
                 )}
               </div>
               <div className="flex-1 space-y-1">
@@ -195,35 +195,35 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
                 </p>
 
                 {currentStatus?.details && !isConnected && (
-                  <div className="mt-2 text-[11px] font-mono p-2 rounded bg-black/40 border border-white/10 text-slate-300 break-all">
+                  <div className="mt-2 text-[11px] font-mono p-2 rounded bg-slate-900/10 dark:bg-black/40 border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 break-all">
                     Detalle técnico: {currentStatus.details}
                   </div>
                 )}
 
                 {/* Metrics Pill Row */}
-                <div className="mt-3 pt-2 border-t border-white/10 flex flex-wrap gap-2 text-xs">
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/5 font-mono">
-                    <Key className="h-3 w-3 text-slate-400" />
-                    <span className="text-slate-400">Clave:</span>
-                    <span className="text-slate-200">{currentStatus?.keyMasked || "(no definida)"}</span>
+                <div className="mt-3 pt-2 border-t border-slate-200 dark:border-white/10 flex flex-wrap gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-200/60 dark:bg-black/30 border border-slate-300/80 dark:border-white/5 font-mono">
+                    <Key className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+                    <span className="text-slate-500 dark:text-slate-400">Clave:</span>
+                    <span className="text-slate-700 dark:text-slate-200">{currentStatus?.keyMasked || "(no definida)"}</span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/5 font-mono">
-                    <Cpu className="h-3 w-3 text-indigo-400" />
-                    <span className="text-slate-400">Modelo:</span>
-                    <span className="text-indigo-300">{currentStatus?.model || selectedModel}</span>
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-200/60 dark:bg-black/30 border border-slate-300/80 dark:border-white/5 font-mono">
+                    <Cpu className="h-3 w-3 text-indigo-500 dark:text-indigo-400" />
+                    <span className="text-slate-500 dark:text-slate-400">Modelo:</span>
+                    <span className="text-indigo-600 dark:text-indigo-300 font-semibold">{currentStatus?.model || selectedModel}</span>
                   </div>
 
                   {currentStatus?.latencyMs ? (
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/5 font-mono">
-                      <Zap className="h-3 w-3 text-amber-400" />
-                      <span className="text-slate-400">Latencia:</span>
-                      <span className="text-amber-300">{currentStatus.latencyMs} ms</span>
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-200/60 dark:bg-black/30 border border-slate-300/80 dark:border-white/5 font-mono">
+                      <Zap className="h-3 w-3 text-amber-500 dark:text-amber-400" />
+                      <span className="text-slate-500 dark:text-slate-400">Latencia:</span>
+                      <span className="text-amber-600 dark:text-amber-300">{currentStatus.latencyMs} ms</span>
                     </div>
                   ) : null}
 
                   {currentStatus?.checkedAt && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/5 text-[11px] text-slate-400">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-200/60 dark:bg-black/30 border border-slate-300/80 dark:border-white/5 text-[11px] text-slate-500 dark:text-slate-400">
                       <span>Verificado: {new Date(currentStatus.checkedAt).toLocaleTimeString()}</span>
                     </div>
                   )}
@@ -234,9 +234,9 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
 
           {/* AI Studio Callout helper if not connected */}
           {!isConnected && (
-            <div className="rounded-xl border border-indigo-500/20 bg-indigo-950/20 p-3.5 flex items-center justify-between gap-3 text-xs text-indigo-200">
+            <div className="rounded-xl border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-950/20 p-3.5 flex items-center justify-between gap-3 text-xs text-indigo-900 dark:text-indigo-200">
               <div className="flex items-center gap-2.5">
-                <ShieldCheck className="h-4 w-4 text-indigo-400 shrink-0" />
+                <ShieldCheck className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                 <span>
                   Obtén tu API Key gratuita en 30 segundos sin necesidad de tarjeta de crédito en <strong>Google AI Studio</strong>.
                 </span>
@@ -254,15 +254,15 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
           )}
 
           {/* Configuration Form Card */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <Key className="h-3.5 w-3.5 text-indigo-400" />
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 p-4 space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <Key className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
               Configurar o Actualizar Clave & Modelo
             </h3>
 
             {/* API Key Input */}
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Nueva GEMINI_API_KEY
               </label>
               <div className="relative">
@@ -271,12 +271,12 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
                   placeholder="Pega aquí tu clave (ej. AIzaSy...)"
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 font-mono focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 pr-10"
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 font-mono focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   title={showKey ? "Ocultar clave" : "Mostrar clave"}
                 >
                   {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -289,7 +289,7 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
 
             {/* Model Selector */}
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Modelo de Gemini
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -300,16 +300,16 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
                     onClick={() => setSelectedModel(m.id)}
                     className={`flex flex-col text-left p-2.5 rounded-lg border text-xs transition-all ${
                       selectedModel === m.id
-                        ? "border-indigo-500 bg-indigo-950/40 text-white shadow-sm"
-                        : "border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-slate-900 dark:text-white shadow-sm"
+                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-slate-200"
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="font-semibold text-slate-200">{m.name}</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{m.name}</span>
                       <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
                         selectedModel === m.id
-                          ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                          : "bg-slate-800 text-slate-400"
+                          ? "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30"
+                          : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                       }`}>
                         {m.tag}
                       </span>
@@ -340,7 +340,7 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
                 type="button"
                 disabled={isTesting}
                 onClick={() => handleTestOrSave(false)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-xs font-medium border border-slate-700 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-50 text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
               >
                 {isTesting ? (
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -357,7 +357,7 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
                   setApiKeyInput("");
                   handleTestOrSave(false);
                 }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-medium transition-colors ml-auto cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-medium transition-colors ml-auto cursor-pointer"
                 title="Vuelve a leer el archivo .env desde el disco"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isTesting ? "animate-spin" : ""}`} />
@@ -366,7 +366,7 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
             </div>
 
             {saveSuccessNotice && (
-              <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-500/30 p-2 rounded-lg">
+              <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-500/30 p-2 rounded-lg">
                 <Check className="h-4 w-4" />
                 <span>Archivo .env actualizado y recargado exitosamente en el servidor.</span>
               </div>
@@ -374,10 +374,10 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
           </div>
 
           {/* Live Prompt Playground / Verification */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <Zap className="h-3.5 w-3.5 text-amber-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <Zap className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
                 Prueba de Generación en Vivo (Playground)
               </h3>
               <span className="text-[11px] text-slate-500">
@@ -391,7 +391,7 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
                 value={testPrompt}
                 onChange={(e) => setTestPrompt(e.target.value)}
                 placeholder="Escribe un prompt de prueba..."
-                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
               />
               <button
                 type="button"
@@ -411,15 +411,15 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
             {promptResult && (
               <div className={`rounded-lg p-3 text-xs border ${
                 promptResult.ok
-                  ? "bg-slate-950 border-emerald-500/30 text-emerald-200"
-                  : "bg-slate-950 border-rose-500/30 text-rose-200"
+                  ? "bg-white dark:bg-slate-950 border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-200"
+                  : "bg-white dark:bg-slate-950 border-rose-300 dark:border-rose-500/30 text-rose-800 dark:text-rose-200"
               }`}>
-                <div className="flex items-center justify-between mb-1 pb-1 border-b border-white/5 text-[11px]">
-                  <span className="font-semibold text-slate-300">
+                <div className="flex items-center justify-between mb-1 pb-1 border-b border-slate-200 dark:border-white/5 text-[11px]">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
                     {promptResult.ok ? "Respuesta de Gemini:" : "Error de respuesta:"}
                   </span>
                   {promptResult.latencyMs > 0 && (
-                    <span className="font-mono text-slate-400">⏱️ {promptResult.latencyMs} ms</span>
+                    <span className="font-mono text-slate-500 dark:text-slate-400">⏱️ {promptResult.latencyMs} ms</span>
                   )}
                 </div>
                 <p className="leading-relaxed whitespace-pre-wrap">{promptResult.text}</p>
@@ -429,11 +429,11 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
+            className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-colors"
           >
             Cerrar
           </button>
