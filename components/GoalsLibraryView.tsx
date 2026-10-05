@@ -1,20 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { Goal, SaasTier } from "../types/mandala";
+import { useSaaS } from "../context/SaaSContext";
 import { 
   Plus, 
   Trash2, 
   ArrowRight, 
-  Layers, 
   Crown, 
-  Sparkles, 
   Download, 
-  Copy, 
   FileUp, 
   HardDrive,
-  Clock,
-  CheckCircle2
+  Building,
+  User,
+  Users
 } from "lucide-react";
 import { DocumentModalTab } from "./DocumentManagerModal";
+import { matchTextAccentInsensitive } from "../services/searchUtils";
 
 interface GoalsLibraryViewProps {
   goals: Goal[];
@@ -27,6 +27,7 @@ interface GoalsLibraryViewProps {
   onOpenDocumentModal: (tab?: DocumentModalTab) => void;
   onDuplicateGoal: (goal: Goal) => void;
   onSaveGoalToFile: (goal: Goal) => void;
+  searchQuery?: string;
 }
 
 export const GoalsLibraryView: React.FC<GoalsLibraryViewProps> = ({
@@ -40,7 +41,30 @@ export const GoalsLibraryView: React.FC<GoalsLibraryViewProps> = ({
   onOpenDocumentModal,
   onDuplicateGoal,
   onSaveGoalToFile,
+  searchQuery = '',
 }) => {
+  const { currentTeam } = useSaaS();
+  const [filterScope, setFilterScope] = useState<'all' | 'team' | 'personal'>('all');
+
+  const filteredGoals = goals.filter((g) => {
+    if (filterScope === 'team') {
+      if (!(g.teamId === currentTeam.id || g.visibility === 'team')) return false;
+    }
+    if (filterScope === 'personal') {
+      if (!(!g.teamId || g.visibility === 'private')) return false;
+    }
+    if (searchQuery && searchQuery.trim()) {
+      const matchTitle = matchTextAccentInsensitive(g.title, searchQuery);
+      const matchContext = matchTextAccentInsensitive(g.context, searchQuery);
+      const matchActions = g.pillars.some((p) =>
+        matchTextAccentInsensitive(p.title, searchQuery) ||
+        p.actions.some((a) => matchTextAccentInsensitive(a.title, searchQuery) || matchTextAccentInsensitive(a.notes, searchQuery))
+      );
+      if (!matchTitle && !matchContext && !matchActions) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
@@ -85,9 +109,51 @@ export const GoalsLibraryView: React.FC<GoalsLibraryViewProps> = ({
         </div>
       </div>
 
+      {/* Scope Filter Bar (SaaS Workspaces) */}
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-slate-400 font-medium">Ámbito:</span>
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={() => setFilterScope('all')}
+            className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer ${
+              filterScope === 'all'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            Todos ({goals.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterScope('team')}
+            className={`px-3 py-1 font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
+              filterScope === 'team'
+                ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <Building className="h-3 w-3" />
+            <span>Equipo ({currentTeam.name})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterScope('personal')}
+            className={`px-3 py-1 font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
+              filterScope === 'personal'
+                ? 'bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <User className="h-3 w-3" />
+            <span>Personales</span>
+          </button>
+        </div>
+      </div>
+
       {/* Grid of Goals / Documents */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {goals.map((goal) => {
+        {filteredGoals.map((goal) => {
           let totalActions = 0;
           let completedActions = 0;
           let habitCount = 0;
@@ -102,6 +168,7 @@ export const GoalsLibraryView: React.FC<GoalsLibraryViewProps> = ({
 
           const progress = totalActions > 0 ? Math.round((completedActions / totalActions) * 100) : 0;
           const isCurrent = goal.id === currentGoalId;
+          const isTeamGoal = goal.teamId || goal.visibility === 'team';
 
           return (
             <div
@@ -113,14 +180,25 @@ export const GoalsLibraryView: React.FC<GoalsLibraryViewProps> = ({
               }`}
             >
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                    {goal.pillars.length} Pilares · {totalActions} Acciones
-                  </span>
+                <div className="flex items-center justify-between gap-1 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                      {goal.pillars.length} Pilares · {totalActions} Acciones
+                    </span>
+                    {isTeamGoal ? (
+                      <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 flex items-center gap-1 border border-indigo-200 dark:border-indigo-500/20">
+                        <Users className="h-2.5 w-2.5" /> Equipo
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-teal-50 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 flex items-center gap-1 border border-teal-200 dark:border-teal-500/20">
+                        <User className="h-2.5 w-2.5" /> Privada
+                      </span>
+                    )}
+                  </div>
 
                   {isCurrent && (
                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
-                      Documento Activo
+                      Activo
                     </span>
                   )}
                 </div>
@@ -179,30 +257,35 @@ export const GoalsLibraryView: React.FC<GoalsLibraryViewProps> = ({
                     className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                     title="Duplicar / Guardar como copia"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Plus className="h-4 w-4" />
                   </button>
 
                   {/* Delete (if more than 1) */}
                   {goals.length > 1 && (
                     <button
-                      onClick={() => onDeleteGoal(goal.id)}
-                      className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-colors cursor-pointer"
-                      title="Eliminar documento"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar la meta "${goal.title}"?`)) {
+                          onDeleteGoal(goal.id);
+                        }
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                      title="Eliminar meta"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
                 </div>
 
+                {/* Select / Open Goal Button */}
                 <button
                   onClick={() => onSelectGoal(goal.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     isCurrent
-                      ? "bg-indigo-50 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40 hover:bg-indigo-100 dark:hover:bg-indigo-600/40"
-                      : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white"
+                      ? "bg-indigo-600 text-white shadow-xs hover:bg-indigo-500"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
                   }`}
                 >
-                  <span>{isCurrent ? "Abrir Matriz" : "Cargar Documento"}</span>
+                  <span>{isCurrent ? "Abierto" : "Abrir"}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </div>

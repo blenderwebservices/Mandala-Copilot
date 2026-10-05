@@ -10,8 +10,12 @@ import {
   Zap,
   Info,
   Layers,
-  Edit3
+  Edit3,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
+import { GlobalFilterStatus } from './GlobalFilterBar';
+import { matchAnyTextAccentInsensitive } from '../services/searchUtils';
 
 interface MandalaGridProps {
   goal: Goal;
@@ -21,6 +25,9 @@ interface MandalaGridProps {
   isGeneratingPillar: number | null;
   onOpenCheckin: () => void;
   onOpenMainGoalModal: () => void;
+  searchQuery?: string;
+  statusFilter?: GlobalFilterStatus;
+  onStatusFilterChange?: (status: GlobalFilterStatus) => void;
 }
 
 export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
@@ -31,9 +38,15 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
   isGeneratingPillar,
   onOpenCheckin,
   onOpenMainGoalModal,
+  searchQuery = '',
+  statusFilter = 'all',
+  onStatusFilterChange,
 }) => {
-  const [filterType, setFilterType] = useState<'all' | 'pending' | 'recurring' | 'one_time'>('all');
   const [hoveredAction, setHoveredAction] = useState<{ pillarTitle: string; action: MandalaAction } | null>(null);
+
+  // Normalized search query
+  const cleanQuery = searchQuery.trim().toLowerCase();
+  const isFilterActive = cleanQuery.length > 0 || statusFilter !== 'all';
 
   // Calculate overall stats
   let totalActions = 0;
@@ -186,44 +199,64 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
           </div>
         </div>
 
-        {/* Filter Segmented Control */}
+        {/* Filter Segmented Control (Synchronized with Global Status Filter) */}
         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-950/80 rounded-lg border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-950/80 rounded-lg border border-slate-200 dark:border-slate-800 overflow-x-auto">
             <button
-              onClick={() => setFilterType('all')}
-              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer ${
-                filterType === 'all'
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+              onClick={() => onStatusFilterChange?.('all')}
+              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer shrink-0 ${
+                statusFilter === 'all'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-semibold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Todas (64)
             </button>
             <button
-              onClick={() => setFilterType('pending')}
-              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer ${
-                filterType === 'pending'
-                  ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 shadow-sm'
+              onClick={() => onStatusFilterChange?.('pending')}
+              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer shrink-0 ${
+                statusFilter === 'pending'
+                  ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 shadow-sm font-semibold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Pendientes ({totalActions - completedActions})
             </button>
             <button
-              onClick={() => setFilterType('recurring')}
-              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer ${
-                filterType === 'recurring'
-                  ? 'bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 shadow-sm'
+              onClick={() => onStatusFilterChange?.('completed')}
+              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer shrink-0 ${
+                statusFilter === 'completed'
+                  ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 shadow-sm font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              Completadas ({completedActions})
+            </button>
+            <button
+              onClick={() => onStatusFilterChange?.('in_progress')}
+              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer shrink-0 ${
+                statusFilter === 'in_progress'
+                  ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-sm font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              En Progreso
+            </button>
+            <button
+              onClick={() => onStatusFilterChange?.('recurring')}
+              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer shrink-0 ${
+                statusFilter === 'recurring'
+                  ? 'bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 shadow-sm font-semibold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Hábitos ({totalRecurring})
             </button>
             <button
-              onClick={() => setFilterType('one_time')}
-              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer ${
-                filterType === 'one_time'
-                  ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-sm'
+              onClick={() => onStatusFilterChange?.('one_time')}
+              className={`px-3 py-1 font-medium rounded-md transition-colors cursor-pointer shrink-0 ${
+                statusFilter === 'one_time'
+                  ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-sm font-semibold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -355,12 +388,30 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
                 const hasActions = pillar.actions && pillar.actions.length === 8;
                 const isGenerating = isGeneratingPillar === pIdx;
 
+                const matchingInThisPillar = isFilterActive
+                  ? pillar.actions.filter((a) => {
+                      const mSearch = matchAnyTextAccentInsensitive([a.title, a.notes, a.assignee], searchQuery);
+
+                      let mStatus = true;
+                      if (statusFilter === 'pending') mStatus = !a.isCompleted && a.progress !== 100;
+                      else if (statusFilter === 'completed') mStatus = a.isCompleted || a.progress === 100;
+                      else if (statusFilter === 'in_progress') mStatus = !a.isCompleted && ((a.progress && a.progress > 0) || a.status === 'in_progress');
+                      else if (statusFilter === 'blocked') mStatus = !!a.isStuck || a.status === 'blocked';
+                      else if (statusFilter === 'recurring') mStatus = a.type === 'recurring';
+                      else if (statusFilter === 'one_time') mStatus = a.type === 'one_time';
+
+                      return mSearch && mStatus;
+                    }).length
+                  : 0;
+
                 return (
                   <div
                     key={`pillar-macro-${pIdx}`}
-                    className={`p-2 rounded-xl border transition-all duration-300 flex flex-col justify-between ${getProgressBorderColor(
-                      progress
-                    )}`}
+                    className={`p-2 rounded-xl border transition-all duration-300 flex flex-col justify-between ${
+                      isFilterActive && matchingInThisPillar > 0
+                        ? 'ring-2 ring-indigo-500/50 dark:ring-indigo-400/50 shadow-sm'
+                        : ''
+                    } ${getProgressBorderColor(progress)}`}
                   >
                     {/* Macro Block Header */}
                     <div className="flex items-center justify-between mb-1.5 px-1">
@@ -371,6 +422,11 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
                         <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200 truncate">
                           {pillar.title}
                         </span>
+                        {isFilterActive && matchingInThisPillar > 0 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-indigo-600 text-white shrink-0">
+                            {matchingInThisPillar}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300">
@@ -433,11 +489,17 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
                           if (!action) return <div key={`empty-a-${sIdx}`} />;
 
                           // Apply filter highlights
-                          const matchesFilter =
-                            filterType === 'all' ||
-                            (filterType === 'pending' && !action.isCompleted) ||
-                            (filterType === 'recurring' && action.type === 'recurring') ||
-                            (filterType === 'one_time' && action.type === 'one_time');
+                          const matchesSearch = matchAnyTextAccentInsensitive([action.title, action.notes, action.assignee], searchQuery);
+
+                          let matchesStatus = true;
+                          if (statusFilter === 'pending') matchesStatus = !action.isCompleted && action.progress !== 100;
+                          else if (statusFilter === 'completed') matchesStatus = action.isCompleted || action.progress === 100;
+                          else if (statusFilter === 'in_progress') matchesStatus = !action.isCompleted && ((action.progress && action.progress > 0) || action.status === 'in_progress');
+                          else if (statusFilter === 'blocked') matchesStatus = !!action.isStuck || action.status === 'blocked';
+                          else if (statusFilter === 'recurring') matchesStatus = action.type === 'recurring';
+                          else if (statusFilter === 'one_time') matchesStatus = action.type === 'one_time';
+
+                          const matchesFilter = matchesSearch && matchesStatus;
 
                           return (
                             <div
@@ -445,9 +507,11 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
                               onMouseEnter={() => setHoveredAction({ pillarTitle: pillar.title, action })}
                               onMouseLeave={() => setHoveredAction(null)}
                               onClick={() => onToggleAction(pIdx, subCell.aIdx!)}
-                              className={`p-1.5 rounded-md border text-left cursor-pointer transition-all flex flex-col justify-between group ${
-                                !matchesFilter
-                                  ? 'opacity-25 grayscale border-slate-200/40 dark:border-slate-800/40 bg-slate-100/30 dark:bg-slate-900/20'
+                              className={`p-1.5 rounded-md border text-left cursor-pointer transition-all flex flex-col justify-between group relative ${
+                                isFilterActive && !matchesFilter
+                                  ? 'opacity-20 grayscale border-slate-200/40 dark:border-slate-800/40 bg-slate-100/30 dark:bg-slate-900/20'
+                                  : isFilterActive && matchesFilter
+                                  ? 'ring-2 ring-indigo-500 shadow-md scale-[1.02] z-10 bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-400 dark:border-indigo-500 text-slate-900 dark:text-white'
                                   : action.isCompleted
                                   ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-500/40 text-emerald-900 dark:text-emerald-100 hover:border-emerald-400'
                                   : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/60 shadow-xs'
@@ -459,6 +523,10 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
                                 </span>
                                 {action.isCompleted ? (
                                   <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500 dark:text-emerald-400 shrink-0" />
+                                ) : action.status === 'blocked' || action.isStuck ? (
+                                  <AlertTriangle className="h-2.5 w-2.5 text-rose-500 shrink-0" />
+                                ) : action.status === 'in_progress' ? (
+                                  <Clock className="h-2.5 w-2.5 text-indigo-500 shrink-0" />
                                 ) : action.type === 'recurring' ? (
                                   <RotateCw className="h-2.5 w-2.5 text-teal-600 dark:text-teal-400/80 shrink-0" />
                                 ) : (
@@ -469,6 +537,8 @@ export const MandalaGrid9x9: React.FC<MandalaGridProps> = ({
                                 className={`text-[9.5px] line-clamp-2 leading-tight ${
                                   action.isCompleted
                                     ? 'line-through text-slate-400 dark:text-slate-500'
+                                    : isFilterActive && matchesFilter
+                                    ? 'text-indigo-950 dark:text-white font-bold'
                                     : 'text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white font-medium'
                                 }`}
                               >

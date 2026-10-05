@@ -214,6 +214,118 @@ app.post("/api/gemini-test-prompt", async (req, res) => {
     });
   }
 });
+app.post("/api/validate-harada-goal", async (req, res) => {
+  const { goalTitle, goalContext } = req.body;
+  if (!goalTitle || typeof goalTitle !== "string" || !goalTitle.trim()) {
+    return res.status(400).json({ error: "goalTitle is required" });
+  }
+  const safeGoalTitle = goalTitle.trim().substring(0, 350);
+  const safeGoalContext = typeof goalContext === "string" ? goalContext.trim().substring(0, 1500) : "";
+  const { model } = loadEnvConfig();
+  const ai = getAiClient();
+  try {
+    const prompt = `Analiza el siguiente objetivo para el centro de una matriz 9x9 del M\xE9todo Harada:
+Objetivo propuesto: "${safeGoalTitle}"
+Contexto opcional: "${safeGoalContext || "Sin contexto adicional"}"
+
+Eval\xFAa rigurosamente si cumple con el principio fundamental del M\xE9todo Harada:
+"En la casilla central de toda la cuadr\xEDcula (el centro del bloque 3x3 del medio) se escribe el objetivo principal, el cual debe ser claro, medible y desafiante."
+
+Debes responder con:
+- isCongruent: boolean (true solo si ya es muy claro, incluye m\xE9tricas/plazo medible y es suficientemente desafiante; false si es vago, abstracto, sin plazo o sin m\xE9trica).
+- score: n\xFAmero del 0 al 100 evaluando la alineaci\xF3n con el m\xE9todo Harada.
+- criteria: { isClear: boolean, isMeasurable: boolean, isChallenging: boolean }
+- diagnosis: Explicaci\xF3n breve y constructiva de qu\xE9 le falta o qu\xE9 tiene bien seg\xFAn el m\xE9todo Harada.
+- recommendation: Un consejo pr\xE1ctico de 1 oraci\xF3n para formular objetivos seg\xFAn Harada.
+- suggestions: Exactamente 3 metas alternativas reformuladas que preserven la intenci\xF3n del usuario pero estructuradas a la perfecci\xF3n (claras, con m\xE9trica/plazo medible y ambiciosas/desafiantes). Para cada una proporciona "title" (la meta reformulada) y "rationale" (por qu\xE9 cumple con el m\xE9todo Harada).`;
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+      config: {
+        systemInstruction: `Eres un consultor de clase mundial y coach certificado en el M\xE9todo Harada y la formulaci\xF3n del Objetivo Central de la matriz Mandala Chart 9x9.
+El objetivo principal en la casilla central de toda la cuadr\xEDcula (el centro del bloque 3x3 del medio) debe ser:
+1. Claro: Espec\xEDfico y concreto, sin vaguedades.
+2. Medible: Cuantificable, con n\xFAmero, porcentaje o plazo temporal delimitado verificable.
+3. Desafiante: Ambicioso, inspirador, que requiera coordinar 8 pilares estrat\xE9gicos y 64 acciones concretas.
+
+Si el enunciado del usuario no cumple perfectamente con estas tres caracter\xEDsticas, se\xF1\xE1lalo constructivamente y proporciona siempre 3 alternativas superiores que respeten su deseo pero alineadas al M\xE9todo Harada.`,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            isCongruent: { type: Type.BOOLEAN },
+            score: { type: Type.INTEGER },
+            criteria: {
+              type: Type.OBJECT,
+              properties: {
+                isClear: { type: Type.BOOLEAN },
+                isMeasurable: { type: Type.BOOLEAN },
+                isChallenging: { type: Type.BOOLEAN }
+              },
+              required: ["isClear", "isMeasurable", "isChallenging"]
+            },
+            diagnosis: { type: Type.STRING },
+            recommendation: { type: Type.STRING },
+            suggestions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  rationale: { type: Type.STRING }
+                },
+                required: ["title", "rationale"]
+              }
+            }
+          },
+          required: ["isCongruent", "score", "criteria", "diagnosis", "recommendation", "suggestions"]
+        }
+      }
+    });
+    const parsed = JSON.parse(response.text || "{}");
+    return res.json({
+      ...parsed,
+      isAiGenerated: true,
+      model
+    });
+  } catch (error) {
+    console.error("Error validating Harada goal with Gemini:", error);
+    const hasNumber = /\d+/.test(safeGoalTitle);
+    const hasTimeframe = /(mes|meses|días|semanas|año|202\d|q[1-4]|trimestre)/i.test(safeGoalTitle);
+    const isLongEnough = safeGoalTitle.split(" ").length >= 4;
+    const isClear = isLongEnough;
+    const isMeasurable = hasNumber || hasTimeframe;
+    const isChallenging = safeGoalTitle.length >= 15;
+    const isCongruent = isClear && isMeasurable && isChallenging;
+    const baseClean = safeGoalTitle.replace(/^(quiero|deseo|voy a|meta:|objetivo:)\s*/i, "").trim();
+    return res.json({
+      isCongruent,
+      score: isCongruent ? 85 : 45,
+      criteria: {
+        isClear,
+        isMeasurable,
+        isChallenging
+      },
+      diagnosis: isCongruent ? "Tu meta cuenta con claridad y elementos medibles seg\xFAn el M\xE9todo Harada." : "El objetivo propuesto requiere mayor precisi\xF3n en m\xE9tricas verificables y un horizonte temporal definido para desglosarse en 8 pilares.",
+      recommendation: "Un objetivo Harada de alto impacto incluye qu\xE9 lograr\xE1s, en qu\xE9 cifra o est\xE1ndar, y en qu\xE9 plazo espec\xEDfico.",
+      suggestions: [
+        {
+          title: `Lanzar exitosamente ${baseClean || "mi proyecto"} en 6 meses con m\xE9tricas validadas`,
+          rationale: "Establece un horizonte de 6 meses y un est\xE1ndar concreto de validaci\xF3n."
+        },
+        {
+          title: `Consolidar ${baseClean || "mi iniciativa"} alcanzando los primeros 100 usuarios activos antes de fin de a\xF1o`,
+          rationale: "A\xF1ade una meta cuantitativa medible (100 usuarios) y un plazo claro."
+        },
+        {
+          title: `Desarrollar y monetizar ${baseClean || "el objetivo"} con $2,000 MRR en los pr\xF3ximos 180 d\xEDas`,
+          rationale: "Introduce un hito financiero tangible y una ventana de ejecuci\xF3n disciplinada."
+        }
+      ],
+      isAiGenerated: false
+    });
+  }
+});
 app.post("/api/generate-pillars", async (req, res) => {
   const { goalTitle, goalContext, focusPrompt } = req.body;
   if (!goalTitle || typeof goalTitle !== "string" || !goalTitle.trim()) {

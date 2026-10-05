@@ -3,10 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Goal, Pillar, MandalaAction, SaasTier, PRESET_GOALS } from './types/mandala';
-import { Navbar } from './components/Navbar';
+import { Navbar, ActiveViewType } from './components/Navbar';
+import { GlobalFilterBar, GlobalFilterStatus, GlobalFilterStats } from './components/GlobalFilterBar';
 import { MandalaGrid9x9 } from './components/MandalaGrid9x9';
+import { MandalaHierarchyView } from './components/MandalaHierarchyView';
+import { MandalaGanttView } from './components/MandalaGanttView';
 import { PillarFocusModal } from './components/PillarFocusModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { RecalibrateModal } from './components/RecalibrateModal';
@@ -15,6 +18,7 @@ import { SaaSTierModal } from './components/SaaSTierModal';
 import { ExportPrintModal } from './components/ExportPrintModal';
 import { GoalsLibraryView } from './components/GoalsLibraryView';
 import { MainGoalModal } from './components/MainGoalModal';
+import { matchAnyTextAccentInsensitive } from './services/searchUtils';
 import { 
   fetchGeneratedActions, 
   GeneratedAction, 
@@ -24,12 +28,18 @@ import {
 import { AiStatusModal } from './components/AiStatusModal';
 import { DocumentManagerModal, DocumentModalTab } from './components/DocumentManagerModal';
 import { downloadDocumentFile, duplicateGoal, stripPollution, getGoalFingerprint } from './services/documentService';
+import { SaaSProvider, useSaaS } from './context/SaaSContext';
+import { TeamManagementModal } from './components/TeamManagementModal';
+import { AdminDashboardModal } from './components/AdminDashboardModal';
+import { AuthModal } from './components/AuthModal';
 import { AlertCircle, Key, X } from 'lucide-react';
 
 const STORAGE_KEY = 'mandala_copilot_goals_v1';
 const TIER_STORAGE_KEY = 'mandala_copilot_tier_v1';
 
-export default function App() {
+function AppContent() {
+  const { currentTeam, currentUser } = useSaaS();
+
   // Load goals from localStorage or fallback to preset with schema validation (Pilar 5 & 13)
   const [goals, setGoals] = useState<Goal[]>(() => {
     try {
@@ -74,15 +84,27 @@ export default function App() {
   });
 
   // Active view
-  const [activeView, setActiveView] = useState<'grid' | 'goals'>('grid');
+  const [activeView, setActiveView] = useState<ActiveViewType>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'hierarchy';
+    }
+    return 'grid';
+  });
 
   // Modals & Panels
   const [selectedPillarIndex, setSelectedPillarIndex] = useState<number | null>(null);
+
+  // Global persistent search & status filter across all views
+  const [globalSearchQuery, setGlobalSearchQuery] = useState<string>('');
+  const [globalStatusFilter, setGlobalStatusFilter] = useState<GlobalFilterStatus>('all');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isCheckinOpen, setIsCheckinOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isTierModalOpen, setIsTierModalOpen] = useState(false);
   const [isMainGoalModalOpen, setIsMainGoalModalOpen] = useState(false);
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Gemini AI Status & Diagnostics
   const [aiStatus, setAiStatus] = useState<GeminiStatusResult | null>(null);
@@ -235,6 +257,52 @@ export default function App() {
     setSavedGoalTime(currentGoal.updatedAt || currentGoal.createdAt);
   }, [currentGoalId]);
 
+  // Compute global filter stats for current goal
+  const globalFilterStats: GlobalFilterStats = useMemo(() => {
+    let total = 0;
+    let matches = 0;
+    let completed = 0;
+    let pending = 0;
+    let inProgress = 0;
+    let blocked = 0;
+    let recurring = 0;
+    let oneTime = 0;
+
+    const q = globalSearchQuery.toLowerCase().trim();
+
+    currentGoal.pillars.forEach((p) => {
+      p.actions.forEach((a) => {
+        total++;
+        if (a.isCompleted || a.progress === 100) completed++;
+        else pending++;
+
+        if (a.status === 'in_progress' || (a.progress && a.progress > 0 && a.progress < 100)) inProgress++;
+        if (a.status === 'blocked' || a.isStuck) blocked++;
+        if (a.type === 'recurring') recurring++;
+        if (a.type === 'one_time') oneTime++;
+
+        const matchesSearch = matchAnyTextAccentInsensitive(
+          [a.title, p.title, a.notes, a.assignee],
+          globalSearchQuery
+        );
+
+        let matchesStatus = true;
+        if (globalStatusFilter === 'pending') matchesStatus = !a.isCompleted && a.progress !== 100;
+        else if (globalStatusFilter === 'completed') matchesStatus = a.isCompleted || a.progress === 100;
+        else if (globalStatusFilter === 'in_progress') matchesStatus = !a.isCompleted && ((a.progress && a.progress > 0) || a.status === 'in_progress');
+        else if (globalStatusFilter === 'blocked') matchesStatus = !!a.isStuck || a.status === 'blocked';
+        else if (globalStatusFilter === 'recurring') matchesStatus = a.type === 'recurring';
+        else if (globalStatusFilter === 'one_time') matchesStatus = a.type === 'one_time';
+
+        if (matchesSearch && matchesStatus) {
+          matches++;
+        }
+      });
+    });
+
+    return { total, matches, completed, pending, inProgress, blocked, recurring, oneTime };
+  }, [currentGoal, globalSearchQuery, globalStatusFilter]);
+
   // Current fingerprint and whether there are unsaved changes
   const currentFingerprint = getGoalFingerprint(currentGoal);
   const hasUnsavedChanges = currentFingerprint !== savedGoalFingerprint;
@@ -283,10 +351,11 @@ export default function App() {
   };
 
   // Update Action Title
-  const handleUpdateActionTitle = (actionIndex: number, newTitle: string) => {
-    if (selectedPillarIndex === null) return;
+  const handleUpdateActionTitle = (actionIndex: number, newTitle: string, explicitPillarIndex?: number) => {
+    const pIdx = explicitPillarIndex !== undefined ? explicitPillarIndex : selectedPillarIndex;
+    if (pIdx === null || pIdx === undefined) return;
     const updatedPillars = [...currentGoal.pillars];
-    const pillar = { ...updatedPillars[selectedPillarIndex] };
+    const pillar = { ...updatedPillars[pIdx] };
     const actions = [...pillar.actions];
 
     actions[actionIndex] = {
@@ -295,7 +364,7 @@ export default function App() {
     };
 
     pillar.actions = actions;
-    updatedPillars[selectedPillarIndex] = pillar;
+    updatedPillars[pIdx] = pillar;
 
     updateCurrentGoal({
       ...currentGoal,
@@ -305,10 +374,11 @@ export default function App() {
   };
 
   // Toggle Action Type (one_time vs recurring)
-  const handleToggleActionType = (actionIndex: number) => {
-    if (selectedPillarIndex === null) return;
+  const handleToggleActionType = (actionIndex: number, explicitPillarIndex?: number) => {
+    const pIdx = explicitPillarIndex !== undefined ? explicitPillarIndex : selectedPillarIndex;
+    if (pIdx === null || pIdx === undefined) return;
     const updatedPillars = [...currentGoal.pillars];
-    const pillar = { ...updatedPillars[selectedPillarIndex] };
+    const pillar = { ...updatedPillars[pIdx] };
     const actions = [...pillar.actions];
     const target = actions[actionIndex];
 
@@ -321,7 +391,7 @@ export default function App() {
     };
 
     pillar.actions = actions;
-    updatedPillars[selectedPillarIndex] = pillar;
+    updatedPillars[pIdx] = pillar;
 
     updateCurrentGoal({
       ...currentGoal,
@@ -331,10 +401,11 @@ export default function App() {
   };
 
   // Toggle Habit Day of the week
-  const handleToggleHabitDay = (actionIndex: number, dayIndex: number) => {
-    if (selectedPillarIndex === null) return;
+  const handleToggleHabitDay = (actionIndex: number, dayIndex: number, explicitPillarIndex?: number) => {
+    const pIdx = explicitPillarIndex !== undefined ? explicitPillarIndex : selectedPillarIndex;
+    if (pIdx === null || pIdx === undefined) return;
     const updatedPillars = [...currentGoal.pillars];
-    const pillar = { ...updatedPillars[selectedPillarIndex] };
+    const pillar = { ...updatedPillars[pIdx] };
     const actions = [...pillar.actions];
     const target = { ...actions[actionIndex] };
 
@@ -349,13 +420,56 @@ export default function App() {
 
     actions[actionIndex] = target;
     pillar.actions = actions;
-    updatedPillars[selectedPillarIndex] = pillar;
+    updatedPillars[pIdx] = pillar;
 
     updateCurrentGoal({
       ...currentGoal,
       pillars: updatedPillars,
       updatedAt: new Date().toISOString(),
     });
+  };
+
+  // Update specific attributes of an action (Gantt, dates, progress, dependencies, status, etc.)
+  const handleUpdateAction = (pillarIndex: number, actionIndex: number, updates: Partial<MandalaAction>) => {
+    const updatedPillars = [...currentGoal.pillars];
+    const pillar = { ...updatedPillars[pillarIndex] };
+    const actions = [...pillar.actions];
+    actions[actionIndex] = {
+      ...actions[actionIndex],
+      ...updates,
+    };
+    pillar.actions = actions;
+    updatedPillars[pillarIndex] = pillar;
+
+    updateCurrentGoal({
+      ...currentGoal,
+      pillars: updatedPillars,
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  // Batch update multiple actions (e.g. from Auto-Scheduler)
+  const handleBatchUpdateActions = (updatesList: { pillarIndex: number; actionIndex: number; updates: Partial<MandalaAction> }[]) => {
+    const updatedPillars = currentGoal.pillars.map((p) => ({
+      ...p,
+      actions: [...p.actions],
+    }));
+
+    updatesList.forEach(({ pillarIndex, actionIndex, updates }) => {
+      if (updatedPillars[pillarIndex] && updatedPillars[pillarIndex].actions[actionIndex]) {
+        updatedPillars[pillarIndex].actions[actionIndex] = {
+          ...updatedPillars[pillarIndex].actions[actionIndex],
+          ...updates,
+        };
+      }
+    });
+
+    updateCurrentGoal({
+      ...currentGoal,
+      pillars: updatedPillars,
+      updatedAt: new Date().toISOString(),
+    });
+    showToast('Cronograma de proyecto auto-programado con éxito.');
   };
 
   // Update all actions of a pillar (e.g. from manual editor in PillarFocusModal)
@@ -470,14 +584,15 @@ export default function App() {
   };
 
   // Open Recalibrate Modal
-  const handleRequestRecalibrate = (action: MandalaAction, actionIndex: number) => {
-    if (selectedPillarIndex === null) return;
-    const pillarTitle = currentGoal.pillars[selectedPillarIndex].title;
+  const handleRequestRecalibrate = (action: MandalaAction, actionIndex: number, explicitPillarIndex?: number) => {
+    const pIdx = explicitPillarIndex !== undefined ? explicitPillarIndex : selectedPillarIndex;
+    if (pIdx === null || pIdx === undefined) return;
+    const pillarTitle = currentGoal.pillars[pIdx].title;
     setRecalibrateTarget({
       action,
       actionIndex,
       pillarTitle,
-      pillarIndex: selectedPillarIndex,
+      pillarIndex: pIdx,
     });
   };
 
@@ -512,9 +627,16 @@ export default function App() {
 
   // Create New Goal
   const handleGoalCreated = (newGoal: Goal) => {
-    setGoals((prev) => [newGoal, ...prev]);
-    setCurrentGoalId(newGoal.id);
+    const goalWithTeam: Goal = {
+      ...newGoal,
+      teamId: currentTeam.id,
+      ownerId: currentUser.id,
+      visibility: 'team',
+    };
+    setGoals((prev) => [goalWithTeam, ...prev]);
+    setCurrentGoalId(goalWithTeam.id);
     setActiveView('grid');
+    showToast(`Nueva meta "${goalWithTeam.title}" creada en el equipo ${currentTeam.name}.`);
   };
 
   // Delete Goal
@@ -548,7 +670,24 @@ export default function App() {
         isLoadingAiStatus={isLoadingAiStatus}
         onOpenAiStatus={() => setIsAiStatusModalOpen(true)}
         onOpenDocumentModal={handleOpenDocumentModal}
+        onOpenTeamModal={() => setIsTeamModalOpen(true)}
+        onOpenAdminModal={() => setIsAdminModalOpen(true)}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
         hasUnsavedChanges={hasUnsavedChanges}
+      />
+
+      {/* Global Persistent Search & Filter Bar across all views */}
+      <GlobalFilterBar
+        searchQuery={globalSearchQuery}
+        onSearchChange={setGlobalSearchQuery}
+        statusFilter={globalStatusFilter}
+        onStatusFilterChange={setGlobalStatusFilter}
+        onClearFilters={() => {
+          setGlobalSearchQuery('');
+          setGlobalStatusFilter('all');
+        }}
+        stats={globalFilterStats}
+        currentGoalTitle={currentGoal.title}
       />
 
       {/* Main View Area */}
@@ -593,7 +732,7 @@ export default function App() {
           </div>
         )}
 
-        {activeView === 'grid' ? (
+        {activeView === 'grid' && (
           <MandalaGrid9x9
             goal={currentGoal}
             onSelectPillar={(idx) => setSelectedPillarIndex(idx)}
@@ -602,14 +741,54 @@ export default function App() {
             isGeneratingPillar={isGeneratingPillar}
             onOpenCheckin={() => setIsCheckinOpen(true)}
             onOpenMainGoalModal={() => setIsMainGoalModalOpen(true)}
+            searchQuery={globalSearchQuery}
+            statusFilter={globalStatusFilter}
+            onStatusFilterChange={setGlobalStatusFilter}
           />
-        ) : (
+        )}
+
+        {activeView === 'hierarchy' && (
+          <MandalaHierarchyView
+            goal={currentGoal}
+            onToggleAction={handleToggleAction}
+            onUpdateActionTitle={(pIdx, aIdx, newTitle) => handleUpdateActionTitle(aIdx, newTitle, pIdx)}
+            onToggleActionType={(pIdx, aIdx) => handleToggleActionType(aIdx, pIdx)}
+            onToggleHabitDay={(pIdx, aIdx, dIdx) => handleToggleHabitDay(aIdx, dIdx, pIdx)}
+            onRequestRecalibrate={(action, aIdx, pIdx) => handleRequestRecalibrate(action, aIdx, pIdx)}
+            onSelectPillar={(idx) => setSelectedPillarIndex(idx)}
+            onGeneratePillarActions={handleGeneratePillarActions}
+            isGeneratingPillar={isGeneratingPillar}
+            onOpenCheckin={() => setIsCheckinOpen(true)}
+            onOpenMainGoalModal={() => setIsMainGoalModalOpen(true)}
+            searchQuery={globalSearchQuery}
+            onSearchChange={setGlobalSearchQuery}
+            statusFilter={globalStatusFilter}
+            onStatusFilterChange={setGlobalStatusFilter}
+          />
+        )}
+
+        {activeView === 'gantt' && (
+          <MandalaGanttView
+            goal={currentGoal}
+            onUpdateAction={handleUpdateAction}
+            onBatchUpdateActions={handleBatchUpdateActions}
+            onToggleAction={handleToggleAction}
+            onRequestRecalibrate={(action, aIdx, pIdx) => handleRequestRecalibrate(action, aIdx, pIdx)}
+            onOpenMainGoalModal={() => setIsMainGoalModalOpen(true)}
+            searchQuery={globalSearchQuery}
+            onSearchChange={setGlobalSearchQuery}
+            statusFilter={globalStatusFilter}
+            onStatusFilterChange={setGlobalStatusFilter}
+          />
+        )}
+
+        {activeView === 'goals' && (
           <GoalsLibraryView
             goals={goals}
             currentGoalId={currentGoalId}
             onSelectGoal={(id) => {
               setCurrentGoalId(id);
-              setActiveView('grid');
+              setActiveView((prev) => (prev === 'goals' ? (window.innerWidth < 768 ? 'hierarchy' : 'grid') : prev));
             }}
             onDeleteGoal={handleDeleteGoal}
             onNewGoal={() => setIsOnboardingOpen(true)}
@@ -618,6 +797,7 @@ export default function App() {
             onOpenDocumentModal={handleOpenDocumentModal}
             onDuplicateGoal={handleDuplicateGoal}
             onSaveGoalToFile={handleSaveGoalToFile}
+            searchQuery={globalSearchQuery}
           />
         )}
       </main>
@@ -731,6 +911,26 @@ export default function App() {
         lastSavedTime={savedGoalTime}
       />
 
+      {/* Team Workspace & Members Management Modal */}
+      <TeamManagementModal
+        isOpen={isTeamModalOpen}
+        onClose={() => setIsTeamModalOpen(false)}
+      />
+
+      {/* SaaS Global Administration Dashboard Modal */}
+      <AdminDashboardModal
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
+      />
+
+      {/* User Profile & Demo Auth Switcher Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onOpenTeamModal={() => setIsTeamModalOpen(true)}
+        onOpenAdminModal={() => setIsAdminModalOpen(true)}
+      />
+
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-indigo-500/40 text-white text-xs font-medium shadow-2xl shadow-indigo-950/60 backdrop-blur-md animate-fade-in">
@@ -739,5 +939,13 @@ export default function App() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <SaaSProvider>
+      <AppContent />
+    </SaaSProvider>
   );
 }

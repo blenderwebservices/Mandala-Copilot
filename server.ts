@@ -258,6 +258,134 @@ app.post("/api/gemini-test-prompt", async (req: Request, res: Response) => {
 });
 
 // ==========================================
+// 0. Validate Harada Goal Alignment & Suggest 3 Alternatives
+// ==========================================
+app.post("/api/validate-harada-goal", async (req: Request, res: Response) => {
+  const { goalTitle, goalContext } = req.body;
+
+  if (!goalTitle || typeof goalTitle !== "string" || !goalTitle.trim()) {
+    return res.status(400).json({ error: "goalTitle is required" });
+  }
+
+  const safeGoalTitle = goalTitle.trim().substring(0, 350);
+  const safeGoalContext = typeof goalContext === "string" ? goalContext.trim().substring(0, 1500) : "";
+
+  const { model } = loadEnvConfig();
+  const ai = getAiClient();
+
+  try {
+    const prompt = `Analiza el siguiente objetivo para el centro de una matriz 9x9 del Método Harada:
+Objetivo propuesto: "${safeGoalTitle}"
+Contexto opcional: "${safeGoalContext || "Sin contexto adicional"}"
+
+Evalúa rigurosamente si cumple con el principio fundamental del Método Harada:
+"En la casilla central de toda la cuadrícula (el centro del bloque 3x3 del medio) se escribe el objetivo principal, el cual debe ser claro, medible y desafiante."
+
+Debes responder con:
+- isCongruent: boolean (true solo si ya es muy claro, incluye métricas/plazo medible y es suficientemente desafiante; false si es vago, abstracto, sin plazo o sin métrica).
+- score: número del 0 al 100 evaluando la alineación con el método Harada.
+- criteria: { isClear: boolean, isMeasurable: boolean, isChallenging: boolean }
+- diagnosis: Explicación breve y constructiva de qué le falta o qué tiene bien según el método Harada.
+- recommendation: Un consejo práctico de 1 oración para formular objetivos según Harada.
+- suggestions: Exactamente 3 metas alternativas reformuladas que preserven la intención del usuario pero estructuradas a la perfección (claras, con métrica/plazo medible y ambiciosas/desafiantes). Para cada una proporciona "title" (la meta reformulada) y "rationale" (por qué cumple con el método Harada).`;
+
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+      config: {
+        systemInstruction: `Eres un consultor de clase mundial y coach certificado en el Método Harada y la formulación del Objetivo Central de la matriz Mandala Chart 9x9.
+El objetivo principal en la casilla central de toda la cuadrícula (el centro del bloque 3x3 del medio) debe ser:
+1. Claro: Específico y concreto, sin vaguedades.
+2. Medible: Cuantificable, con número, porcentaje o plazo temporal delimitado verificable.
+3. Desafiante: Ambicioso, inspirador, que requiera coordinar 8 pilares estratégicos y 64 acciones concretas.
+
+Si el enunciado del usuario no cumple perfectamente con estas tres características, señálalo constructivamente y proporciona siempre 3 alternativas superiores que respeten su deseo pero alineadas al Método Harada.`,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            isCongruent: { type: Type.BOOLEAN },
+            score: { type: Type.INTEGER },
+            criteria: {
+              type: Type.OBJECT,
+              properties: {
+                isClear: { type: Type.BOOLEAN },
+                isMeasurable: { type: Type.BOOLEAN },
+                isChallenging: { type: Type.BOOLEAN },
+              },
+              required: ["isClear", "isMeasurable", "isChallenging"],
+            },
+            diagnosis: { type: Type.STRING },
+            recommendation: { type: Type.STRING },
+            suggestions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  rationale: { type: Type.STRING },
+                },
+                required: ["title", "rationale"],
+              },
+            },
+          },
+          required: ["isCongruent", "score", "criteria", "diagnosis", "recommendation", "suggestions"],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text || "{}");
+    return res.json({
+      ...parsed,
+      isAiGenerated: true,
+      model,
+    });
+  } catch (error: any) {
+    console.error("Error validating Harada goal with Gemini:", error);
+    // Intelligent heuristic fallback
+    const hasNumber = /\d+/.test(safeGoalTitle);
+    const hasTimeframe = /(mes|meses|días|semanas|año|202\d|q[1-4]|trimestre)/i.test(safeGoalTitle);
+    const isLongEnough = safeGoalTitle.split(" ").length >= 4;
+
+    const isClear = isLongEnough;
+    const isMeasurable = hasNumber || hasTimeframe;
+    const isChallenging = safeGoalTitle.length >= 15;
+    const isCongruent = isClear && isMeasurable && isChallenging;
+
+    const baseClean = safeGoalTitle.replace(/^(quiero|deseo|voy a|meta:|objetivo:)\s*/i, "").trim();
+
+    return res.json({
+      isCongruent,
+      score: isCongruent ? 85 : 45,
+      criteria: {
+        isClear,
+        isMeasurable,
+        isChallenging,
+      },
+      diagnosis: isCongruent
+        ? "Tu meta cuenta con claridad y elementos medibles según el Método Harada."
+        : "El objetivo propuesto requiere mayor precisión en métricas verificables y un horizonte temporal definido para desglosarse en 8 pilares.",
+      recommendation: "Un objetivo Harada de alto impacto incluye qué lograrás, en qué cifra o estándar, y en qué plazo específico.",
+      suggestions: [
+        {
+          title: `Lanzar exitosamente ${baseClean || "mi proyecto"} en 6 meses con métricas validadas`,
+          rationale: "Establece un horizonte de 6 meses y un estándar concreto de validación.",
+        },
+        {
+          title: `Consolidar ${baseClean || "mi iniciativa"} alcanzando los primeros 100 usuarios activos antes de fin de año`,
+          rationale: "Añade una meta cuantitativa medible (100 usuarios) y un plazo claro.",
+        },
+        {
+          title: `Desarrollar y monetizar ${baseClean || "el objetivo"} con $2,000 MRR en los próximos 180 días`,
+          rationale: "Introduce un hito financiero tangible y una ventana de ejecución disciplinada.",
+        },
+      ],
+      isAiGenerated: false,
+    });
+  }
+});
+
+// ==========================================
 // 1. Generate 8 Strategic Pillars
 // ==========================================
 app.post("/api/generate-pillars", async (req: Request, res: Response) => {

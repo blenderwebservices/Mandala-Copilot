@@ -1,4 +1,6 @@
 export type ActionType = 'one_time' | 'recurring';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskStatus = 'not_started' | 'in_progress' | 'completed' | 'blocked';
 
 export interface MandalaAction {
   id: string;
@@ -11,6 +13,18 @@ export interface MandalaAction {
   habitDays: boolean[]; // 7 days of the week [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
   isStuck?: boolean;
   notes?: string;
+
+  // Atributos de Modo Proyecto / Gráfico de Gantt
+  startDate?: string;        // Fecha de inicio YYYY-MM-DD
+  endDate?: string;          // Fecha de fin YYYY-MM-DD
+  predecessorId?: string;    // ID del nodo anterior (dependencia previa)
+  successorId?: string;      // ID del nodo siguiente (tarea sucesora)
+  progress?: number;         // 0 a 100 (% de avance en modo proyecto)
+  priority?: TaskPriority;   // Prioridad
+  status?: TaskStatus;       // Estado operativo del entregable
+  assignee?: string;         // Responsable / Miembro asignado
+  estimatedHours?: number;   // Estimación de esfuerzo en horas
+  isMilestone?: boolean;     // Hito clave de entrega/control
 }
 
 export interface Pillar {
@@ -29,6 +43,9 @@ export interface Goal {
   createdAt: string;
   updatedAt: string;
   pillars: Pillar[];
+  teamId?: string;
+  ownerId?: string;
+  visibility?: 'private' | 'team';
 }
 
 export type SaasTier = 'free' | 'pro';

@@ -19,7 +19,14 @@ import {
   RefreshCw,
   Trash2
 } from 'lucide-react';
-import { fetchGeneratedPillars, fetchGeneratedActions, GeneratedAction } from '../services/api';
+import { 
+  fetchGeneratedPillars, 
+  fetchGeneratedActions, 
+  GeneratedAction,
+  fetchHaradaValidation,
+  HaradaValidationResult
+} from '../services/api';
+import { HaradaValidationCard } from './HaradaValidationCard';
 
 interface MainGoalModalProps {
   isOpen: boolean;
@@ -43,6 +50,10 @@ export const MainGoalModal: React.FC<MainGoalModalProps> = ({
   // Goal meta fields
   const [goalTitle, setGoalTitle] = useState(goal.title);
   const [goalContext, setGoalContext] = useState(goal.context || '');
+
+  // Harada validation state
+  const [haradaValidation, setHaradaValidation] = useState<HaradaValidationResult | null>(null);
+  const [isValidatingHarada, setIsValidatingHarada] = useState(false);
 
   // Local pillars copy for editing
   const [pillars, setPillars] = useState<Pillar[]>(() => JSON.parse(JSON.stringify(goal.pillars)));
@@ -427,17 +438,58 @@ export const MainGoalModal: React.FC<MainGoalModalProps> = ({
               {/* Meta Inputs */}
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Título de la Gran Meta Central <span className="text-indigo-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      Título de la Gran Meta Central <span className="text-indigo-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!goalTitle.trim()) return;
+                        setIsValidatingHarada(true);
+                        try {
+                          const res = await fetchHaradaValidation(goalTitle, goalContext);
+                          setHaradaValidation(res);
+                        } catch (e) {
+                          console.error(e);
+                        } finally {
+                          setIsValidatingHarada(false);
+                        }
+                      }}
+                      disabled={!goalTitle.trim() || isValidatingHarada}
+                      className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                    >
+                      <Sparkles className={`h-3 w-3 ${isValidatingHarada ? 'animate-spin' : ''}`} />
+                      <span>{isValidatingHarada ? 'Analizando con IA...' : 'Auditar con Método Harada'}</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={goalTitle}
-                    onChange={(e) => setGoalTitle(e.target.value)}
-                    placeholder="Ej. Lanzar mi SaaS B2B en 6 meses..."
+                    onChange={(e) => {
+                      setGoalTitle(e.target.value);
+                      if (haradaValidation) setHaradaValidation(null);
+                    }}
+                    placeholder="Ej. Lanzar mi SaaS B2B en 6 meses con $2,000 MRR..."
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 font-semibold"
                   />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    El Método Harada exige que el Objetivo Central sea <strong>claro, medible y desafiante</strong>.
+                  </p>
                 </div>
+
+                {/* Harada Validation Diagnostic & 3 Reformulated Suggestions */}
+                {haradaValidation && (
+                  <HaradaValidationCard
+                    validation={haradaValidation}
+                    onSelectSuggestion={(newTitle) => {
+                      setGoalTitle(newTitle);
+                      setHaradaValidation(null);
+                      showNotice('Meta actualizada según la sugerencia del Método Harada.');
+                    }}
+                    onProceedAnyway={() => setHaradaValidation(null)}
+                  />
+                )}
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">

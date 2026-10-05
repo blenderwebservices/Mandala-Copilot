@@ -21,6 +21,27 @@ export interface WeeklyCheckinResult {
   isAiGenerated?: boolean;
 }
 
+export interface HaradaCriteria {
+  isClear: boolean;
+  isMeasurable: boolean;
+  isChallenging: boolean;
+}
+
+export interface HaradaSuggestion {
+  title: string;
+  rationale: string;
+}
+
+export interface HaradaValidationResult {
+  isCongruent: boolean;
+  score: number;
+  criteria: HaradaCriteria;
+  diagnosis: string;
+  recommendation: string;
+  suggestions: HaradaSuggestion[];
+  isAiGenerated?: boolean;
+}
+
 export type GeminiStatusType =
   | 'connected'
   | 'missing_key'
@@ -185,3 +206,21 @@ export async function fetchWeeklyCheckin(
 
   return await res.json();
 }
+
+export async function fetchHaradaValidation(
+  goalTitle: string,
+  goalContext?: string
+): Promise<HaradaValidationResult> {
+  const res = await fetch('/api/validate-harada-goal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ goalTitle, goalContext }),
+  });
+
+  if (!res.ok) {
+    throw new Error('Error al validar la meta con el Método Harada');
+  }
+
+  return await res.json();
+}
+

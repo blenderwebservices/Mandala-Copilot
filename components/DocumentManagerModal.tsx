@@ -7,6 +7,7 @@ import {
   createDocument,
   getGoalFingerprint
 } from "../services/documentService";
+import { matchAnyTextAccentInsensitive } from "../services/searchUtils";
 import { 
   FolderOpen, 
   Save, 
@@ -211,8 +212,7 @@ export const DocumentManagerModal: React.FC<DocumentManagerModalProps> = ({
 
   const filteredGoals = allGoals.filter((g) => {
     if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return g.title.toLowerCase().includes(query) || (g.context && g.context.toLowerCase().includes(query));
+    return matchAnyTextAccentInsensitive([g.title, g.context], searchQuery);
   });
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-slate-950/85 backdrop-blur-md overflow-y-auto">
