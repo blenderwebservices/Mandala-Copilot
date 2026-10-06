@@ -16,7 +16,8 @@ import {
   Save, 
   Play, 
   ShieldCheck,
-  Check
+  Check,
+  FileText
 } from "lucide-react";
 
 interface AiStatusModalProps {
@@ -221,6 +222,23 @@ export const AiStatusModal: React.FC<AiStatusModalProps> = ({
                       <span className="text-amber-600 dark:text-amber-300">{currentStatus.latencyMs} ms</span>
                     </div>
                   ) : null}
+
+                  {currentStatus?.envPath && (
+                    <div 
+                      className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-200/60 dark:bg-black/30 border border-slate-300/80 dark:border-white/5 font-mono text-[11px]"
+                      title={currentStatus.envFound ? `Archivo .env cargado desde: ${currentStatus.envPath}` : `No se encontró .env (buscado en: ${currentStatus.envPath})`}
+                    >
+                      <FileText className={`h-3 w-3 ${currentStatus.envFound ? "text-emerald-500 dark:text-emerald-400" : "text-amber-500 dark:text-amber-400"}`} />
+                      <span className="text-slate-500 dark:text-slate-400">Origen:</span>
+                      <span className="text-slate-700 dark:text-slate-200 font-semibold">
+                        {currentStatus.source === "system_env" 
+                          ? "Panel / Servidor (Env)" 
+                          : currentStatus.envFound 
+                          ? ".env detectado" 
+                          : ".env ausente"}
+                      </span>
+                    </div>
+                  )}
 
                   {currentStatus?.checkedAt && (
                     <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-200/60 dark:bg-black/30 border border-slate-300/80 dark:border-white/5 text-[11px] text-slate-500 dark:text-slate-400">

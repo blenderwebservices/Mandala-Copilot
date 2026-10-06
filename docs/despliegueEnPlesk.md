@@ -98,15 +98,29 @@ En la misma pantalla de Node.js de Plesk:
 
 ## 7. Variables de Entorno
 
-Puedes definirlas directamente en la sección **Variables de entorno** de la pantalla de Node.js en Plesk, o en un archivo `.env` en la raíz `/httpdocs`:
+Puedes configurarlas de cualquiera de las siguientes formas (el sistema las detecta automáticamente):
 
+### Opción 1 (Recomendada): En la pantalla de Node.js en Plesk
+En **Sitios web y dominios** > **Node.js** > sección **Variables de entorno**:
+* `NODE_ENV` = `production`
+* `GEMINI_API_KEY` = `AIzaSyTuClaveDeGoogleAIStudioAqui`
+* `GEMINI_MODEL` = `gemini-2.5-flash`
+
+*Configurarlas en el panel de Plesk es la opción más segura, ya que evita exponer credenciales en el sistema de archivos.*
+
+### Opción 2: Archivo `.env` en el servidor
+El backend soporta detección multi-directorio inteligente y buscará el archivo `.env` automáticamente en:
+1. `/httpdocs/.env` (directorio de la aplicación donde reside `server.js`)
+2. `/.env` o `../.env` (raíz de la suscripción/dominio, un nivel arriba de `/httpdocs`)
+
+Formato de ejemplo:
 ```env
 NODE_ENV=production
 GEMINI_API_KEY=AIzaSyTuClaveDeGoogleAIStudioAqui
 GEMINI_MODEL=gemini-2.5-flash
 ```
 
-*Configurarlas en el panel de Plesk es más seguro, ya que evita exponer credenciales en archivos del sistema de archivos.*
+*(También se reconocen alias como `VITE_GEMINI_API_KEY` o `GOOGLE_API_KEY`).*
 
 ---
 

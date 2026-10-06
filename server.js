@@ -6,7 +6,33 @@ import { fileURLToPath } from "url";
 import { GoogleGenAI, Type } from "@google/genai";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, ".env") });
+function getCandidateEnvPaths() {
+  const paths = [
+    path.resolve(__dirname, ".env"),
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(__dirname, "..", ".env"),
+    path.resolve(process.cwd(), "..", ".env")
+  ];
+  return Array.from(new Set(paths));
+}
+function resolveEnvFilePath() {
+  const searchedPaths = getCandidateEnvPaths();
+  for (const candidate of searchedPaths) {
+    try {
+      if (fs.existsSync(candidate)) {
+        return { foundPath: candidate, searchedPaths };
+      }
+    } catch {
+    }
+  }
+  return { foundPath: null, searchedPaths };
+}
+const initialEnv = resolveEnvFilePath();
+if (initialEnv.foundPath) {
+  dotenv.config({ path: initialEnv.foundPath });
+} else {
+  dotenv.config();
+}
 const app = express();
 const PORT = process.env.PORT || 3e3;
 app.use((_req, res, next) => {
@@ -18,15 +44,23 @@ app.use((_req, res, next) => {
 });
 app.use(express.json({ limit: "1mb" }));
 function loadEnvConfig() {
-  const envPath = path.resolve(__dirname, ".env");
-  if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+  const { foundPath, searchedPaths } = resolveEnvFilePath();
+  if (foundPath) {
+    dotenv.config({ path: foundPath, override: true });
   } else {
     dotenv.config({ override: true });
   }
-  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
-  const model = (process.env.GEMINI_MODEL || "gemini-2.5-flash").trim();
-  return { apiKey, model, envPath };
+  const apiKey = (process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "").trim();
+  const model = (process.env.GEMINI_MODEL || process.env.VITE_GEMINI_MODEL || "gemini-2.5-flash").trim();
+  const source = foundPath ? "file" : apiKey ? "system_env" : "none";
+  return {
+    apiKey,
+    model,
+    envPath: foundPath || path.resolve(__dirname, ".env"),
+    envFound: Boolean(foundPath),
+    searchedPaths,
+    source
+  };
 }
 function maskApiKey(key) {
   if (!key) return "(no configurada)";
@@ -49,29 +83,33 @@ function getAiClient(customApiKey) {
   });
 }
 async function checkGeminiHealth(targetKey, targetModel) {
-  const { apiKey: envKey, model: envModel } = loadEnvConfig();
+  const { apiKey: envKey, model: envModel, envPath, envFound, searchedPaths, source } = loadEnvConfig();
   const apiKey = targetKey !== void 0 && targetKey.trim() !== "" ? targetKey.trim() : envKey;
   const model = targetModel !== void 0 && targetModel.trim() !== "" ? targetModel.trim() : envModel;
+  const baseDiagnostic = {
+    model,
+    keyMasked: maskApiKey(apiKey),
+    envPath,
+    envFound,
+    source: targetKey ? "manual_test" : source,
+    checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
   if (!apiKey) {
     return {
+      ...baseDiagnostic,
       ok: false,
       status: "missing_key",
-      message: "No se ha configurado la variable GEMINI_API_KEY en el archivo .env",
-      details: "El archivo .env no tiene definida una clave API o est\xE1 vac\xEDa.",
-      model,
-      keyMasked: maskApiKey(apiKey),
-      checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+      message: envFound ? `Archivo .env detectado (${path.basename(path.dirname(envPath))}/.env), pero no contiene la variable GEMINI_API_KEY.` : "No se encontr\xF3 el archivo .env ni la variable GEMINI_API_KEY en el servidor.",
+      details: envFound ? `Archivo le\xEDdo en: ${envPath}. Define GEMINI_API_KEY="AIzaSy..." dentro de dicho archivo.` : `Rutas examinadas sin \xE9xito: ${searchedPaths.join(", ")}. Puedes colocar el .env en la ra\xEDz de la aplicaci\xF3n o definir la variable en el panel del hosting.`
     };
   }
   if (apiKey === "MY_GEMINI_API_KEY" || apiKey.includes("MY_GEMINI_API_KEY")) {
     return {
+      ...baseDiagnostic,
       ok: false,
       status: "placeholder_key",
       message: 'GEMINI_API_KEY tiene el valor por defecto de plantilla ("MY_GEMINI_API_KEY")',
-      details: "Obt\xE9n tu clave gratuita en Google AI Studio (https://aistudio.google.com/app/apikey) y reempl\xE1zala en tu archivo .env o en el modal de configuraci\xF3n.",
-      model,
-      keyMasked: maskApiKey(apiKey),
-      checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+      details: "Obt\xE9n tu clave gratuita en Google AI Studio (https://aistudio.google.com/app/apikey) y reempl\xE1zala en tu archivo .env o en el modal de configuraci\xF3n."
     };
   }
   const ai = new GoogleGenAI({
@@ -90,14 +128,12 @@ async function checkGeminiHealth(targetKey, targetModel) {
     const latencyMs = Date.now() - t0;
     const responseSample = result.text?.trim() || "OK";
     return {
+      ...baseDiagnostic,
       ok: true,
       status: "connected",
       message: `Conexi\xF3n con Gemini exitosa. El modelo "${model}" est\xE1 operativo.`,
-      model,
-      keyMasked: maskApiKey(apiKey),
       latencyMs,
-      responseSample,
-      checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+      responseSample
     };
   } catch (error) {
     const latencyMs = Date.now() - t0;
@@ -115,14 +151,12 @@ async function checkGeminiHealth(targetKey, targetModel) {
       userMessage = `El modelo "${model}" no fue encontrado o no est\xE1 disponible con esta clave. Prueba seleccionando "gemini-2.5-flash".`;
     }
     return {
+      ...baseDiagnostic,
       ok: false,
       status,
       message: userMessage,
       details: errMsg,
-      model,
-      keyMasked: maskApiKey(apiKey),
-      latencyMs,
-      checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+      latencyMs
     };
   }
 }
@@ -150,10 +184,14 @@ app.post("/api/gemini-status", async (req, res) => {
       });
     }
     try {
-      const envPath = path.resolve(__dirname, ".env");
-      let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+      const { envPath: targetEnvPath } = loadEnvConfig();
+      let content = fs.existsSync(targetEnvPath) ? fs.readFileSync(targetEnvPath, "utf8") : "";
       if (/^GEMINI_API_KEY=.*$/m.test(content)) {
         content = content.replace(/^GEMINI_API_KEY=.*$/m, `GEMINI_API_KEY="${cleanKey}"`);
+      } else if (/^VITE_GEMINI_API_KEY=.*$/m.test(content)) {
+        content = content.replace(/^VITE_GEMINI_API_KEY=.*$/m, `GEMINI_API_KEY="${cleanKey}"`);
+      } else if (/^GOOGLE_API_KEY=.*$/m.test(content)) {
+        content = content.replace(/^GOOGLE_API_KEY=.*$/m, `GEMINI_API_KEY="${cleanKey}"`);
       } else {
         content += `
 GEMINI_API_KEY="${cleanKey}"
@@ -162,14 +200,16 @@ GEMINI_API_KEY="${cleanKey}"
       if (cleanModel) {
         if (/^GEMINI_MODEL=.*$/m.test(content)) {
           content = content.replace(/^GEMINI_MODEL=.*$/m, `GEMINI_MODEL="${cleanModel}"`);
+        } else if (/^VITE_GEMINI_MODEL=.*$/m.test(content)) {
+          content = content.replace(/^VITE_GEMINI_MODEL=.*$/m, `GEMINI_MODEL="${cleanModel}"`);
         } else {
           content += `
 GEMINI_MODEL="${cleanModel}"
 `;
         }
       }
-      fs.writeFileSync(envPath, content, "utf8");
-      console.log("\u{1F4BE} Updated .env file safely with validated Gemini configuration");
+      fs.writeFileSync(targetEnvPath, content, "utf8");
+      console.log(`\u{1F4BE} Updated .env file safely at ${targetEnvPath} with validated Gemini configuration`);
     } catch (saveErr) {
       console.error("Failed to write to .env:", saveErr);
     }

@@ -61,6 +61,9 @@ export interface GeminiStatusResult {
   latencyMs?: number;
   responseSample?: string;
   checkedAt: string;
+  envPath?: string;
+  envFound?: boolean;
+  source?: string;
 }
 
 export interface PromptTestResult {
