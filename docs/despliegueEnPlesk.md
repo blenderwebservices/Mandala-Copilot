@@ -17,7 +17,11 @@ Mandala Copilot AI funciona mediante una arquitectura híbrida de alto rendimien
 
 ## 2. Requisitos Previos en el Servidor Plesk
 
-1. **Extensión Node.js de Plesk** instalada y habilitada para el dominio o subdominio asignado (ej. `mandala.tudominio.com`).
+1. **Extensión Node.js de Plesk** instalada y habilitada para el dominio:
+   * **Si el icono de Node.js no aparece en el Dashboard:**
+     - **Paso A (Instalar la extensión):** En el menú lateral izquierdo de Plesk, ve a **Extensiones** (*Extensions*), busca **"Node.js"** e instálala (es oficial y gratuita).  
+       *Alternativa:* En **Herramientas y configuración** > **Actualizaciones** > **Añadir/Eliminar componentes** > **Alojamiento web**, marca e instala **Soporte para Node.js**.
+     - **Paso B (Habilitar permisos en el Plan o Suscripción):** Ve a **Planes de servicio** > selecciona tu plan (o en **Suscripciones** > selecciona tu dominio > **Personalizar**) > pestaña **Permisos**, y marca la casilla **Gestión de soporte de Node.js**.
 2. **Versión de Node.js:** Seleccionar **Node.js 20.x LTS** o **22.x LTS**.
 3. **Certificado SSL Activo:** Emitir e instalar el certificado gratuito **Let's Encrypt** desde el panel de Plesk para habilitar `https://`.
 4. **Clave API de Gemini:** Clave activa obtenida desde [Google AI Studio](https://aistudio.google.com/app/apikey).
@@ -76,9 +80,16 @@ Entra a **Sitios web y dominios** > haz clic en el icono **Node.js** de tu domin
 | :--- | :--- | :--- |
 | **Versión de Node.js** | `20.x.x` o `22.x.x` | Versión LTS compatible |
 | **Modo de la aplicación (*Application Mode*)** | `production` | Activa compresión y omite middlewares de desarrollo |
-| **Raíz de la aplicación (*Application Root*)** | `/httpdocs` | Directorio donde residen `server.js` y `dist/` |
+| **Raíz de la aplicación (*Application Root*)** | `mandala.tudominio.com` (o `/httpdocs`) | Directorio donde residen `server.js`, `.env` y la carpeta `dist/` |
 | **Archivo de inicio (*Application Startup File*)** | `server.js` | Archivo principal que arranca Express |
-| **Raíz del documento (*Document Root*)** | `/httpdocs` | Raíz web estándar para Passenger |
+| **Raíz del documento (*Document Root*)** | `mandala.tudominio.com` (o `/httpdocs`) | **¡NO poner `/dist`!** Debe ser la misma raíz que la aplicación. |
+
+> ⚠️ **IMPORTANTE: ¿Por qué NO poner `/dist` como Document Root en Hosting Settings?**  
+> Si configuras el Document Root hacia `.../dist`, el servidor web (Apache/Nginx) tratará el sitio como un sitio estático plano y **NO ejecutará Node.js (`server.js`)**. Como consecuencia:
+> 1. Las peticiones a la API (`/api/*`) fallarán con error 404.
+> 2. Las variables del archivo `.env` nunca serán leídas (el navegador no lee archivos `.env`).
+> 
+> `server.js` ya está programado para servir automáticamente los archivos estáticos de la carpeta `dist/` además de atender todas las llamadas de la API de IA. Por lo tanto, el Document Root debe ser la carpeta donde reside `server.js`.
 
 ---
 

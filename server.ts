@@ -60,6 +60,19 @@ app.use((_req, res, next) => {
 // Explicit JSON request body size limit to prevent memory exhaustion (DoS)
 app.use(express.json({ limit: "1mb" }));
 
+function cleanEnvValue(val: string | undefined): string {
+  if (!val) return "";
+  let cleaned = val.trim();
+  // Strip wrapping double or single quotes if entered in Plesk GUI / .env
+  if (
+    (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+    (cleaned.startsWith("'") && cleaned.endsWith("'"))
+  ) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  return cleaned;
+}
+
 // Helper to dynamically read latest configuration from .env and environment variables
 function loadEnvConfig() {
   const { foundPath, searchedPaths } = resolveEnvFilePath();
@@ -69,19 +82,18 @@ function loadEnvConfig() {
     dotenv.config({ override: true });
   }
 
-  // Support common aliases for Gemini API key & model
-  const apiKey = (
+  // Support common aliases for Gemini API key & model, and clean wrapping quotes
+  const apiKey = cleanEnvValue(
     process.env.GEMINI_API_KEY ||
     process.env.VITE_GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    ""
-  ).trim();
+    process.env.GOOGLE_API_KEY
+  );
 
-  const model = (
+  const model = cleanEnvValue(
     process.env.GEMINI_MODEL ||
     process.env.VITE_GEMINI_MODEL ||
     "gemini-2.5-flash"
-  ).trim();
+  );
 
   const source = foundPath ? "file" : apiKey ? "system_env" : "none";
 

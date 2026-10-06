@@ -43,6 +43,14 @@ app.use((_req, res, next) => {
   next();
 });
 app.use(express.json({ limit: "1mb" }));
+function cleanEnvValue(val) {
+  if (!val) return "";
+  let cleaned = val.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"') || cleaned.startsWith("'") && cleaned.endsWith("'")) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  return cleaned;
+}
 function loadEnvConfig() {
   const { foundPath, searchedPaths } = resolveEnvFilePath();
   if (foundPath) {
@@ -50,8 +58,12 @@ function loadEnvConfig() {
   } else {
     dotenv.config({ override: true });
   }
-  const apiKey = (process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "").trim();
-  const model = (process.env.GEMINI_MODEL || process.env.VITE_GEMINI_MODEL || "gemini-2.5-flash").trim();
+  const apiKey = cleanEnvValue(
+    process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY
+  );
+  const model = cleanEnvValue(
+    process.env.GEMINI_MODEL || process.env.VITE_GEMINI_MODEL || "gemini-2.5-flash"
+  );
   const source = foundPath ? "file" : apiKey ? "system_env" : "none";
   return {
     apiKey,
